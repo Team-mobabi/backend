@@ -1,6 +1,6 @@
 import { IsOptional, IsArray, IsString } from 'class-validator';
 
-export class AddFilesDto {
+export class AddDto {
     @IsOptional()
     @IsArray()
     @IsString({ each: true })
