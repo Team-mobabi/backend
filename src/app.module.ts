@@ -35,7 +35,7 @@ import * as Joi from "joi";
         password: configService.get<string>("DB_PASSWORD"),
         database: configService.get<string>("DB_DATABASE"),
         entities: [Repo],
-        synchronize: true,
+        synchronize: configService.get<string>('ENV') !== 'prod',
       }),
       inject: [ConfigService],
     }),
