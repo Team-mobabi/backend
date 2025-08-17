@@ -1,5 +1,5 @@
 import {
-    ConflictException,
+    ConflictException, ForbiddenException,
     HttpException, HttpStatus,
     Injectable,
     InternalServerErrorException,
@@ -28,15 +28,20 @@ export class ReposService {
         private readonly repoRepository: Repository<Repo>,
         private readonly configService: ConfigService,
     ) {
-        this.repoBasePath = this.configService.get<string>('REPO_BASE_PATH', 'data/git');
-        this.remoteBasePath = this.configService.get<string>('REMOTE_BASE_PATH', 'data/remote');
+        this.repoBasePath = this.configService.get<string>('REPO_LOCAL_BASE_PATH', 'data/git');
+        this.remoteBasePath = this.configService.get<string>('REMOTE_LOCAL_BASE_PATH', 'data/remote');
     }
 
-    private async _getRepoAndGitInstance(repoId: string): Promise<{ repo: Repo; git: SimpleGit }> {
+    private async _getRepoAndGitInstance(repoId: string, userId: string): Promise<{ repo: Repo; git: SimpleGit }> {
         const repo = await this.repoRepository.findOne({where: {repoId}});
         if (!repo) {
             throw new NotFoundException('Repository not found');
         }
+
+        if (repo.ownerId !== userId) {
+            throw new ForbiddenException('You do not have permission to access this repository.');
+        }
+
         if (!repo.gitPath) {
             throw new InternalServerErrorException('Repository path is not configured.');
         }
@@ -66,6 +71,8 @@ export class ReposService {
             await git.init();
             await git.addConfig('commit.gpgsign', 'false');
 
+            await git.commit('Initial commit', undefined, {'--allow-empty': null, '--no-gpg-sign': null});
+
             return this.repoRepository.save(savedRepo);
         } catch (error) {
             await this.repoRepository.delete(savedRepo.repoId);
@@ -75,12 +82,12 @@ export class ReposService {
 
     async pullRepo(
         repoId: string,
+        userId: string,
         remote = 'origin',
         branch = 'main',
         ffOnly = false,
     ) {
-        const {git} = await this._getRepoAndGitInstance(repoId);
-
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
         await git.fetch(remote, branch);
 
         const localHash = (await git.revparse(['HEAD'])).trim();
@@ -115,8 +122,8 @@ export class ReposService {
         };
     }
 
-    async addRemote(repoId: string, url: string, name = 'origin') {
-        const {git} = await this._getRepoAndGitInstance(repoId);
+    async addRemote(repoId: string, userId: string, url: string, name = 'origin') {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
         const remotes = await git.getRemotes(true);
         if (remotes.find((r) => r.name === name)) {
             await git.remote(['set-url', name, url]);
@@ -125,11 +132,8 @@ export class ReposService {
         }
     }
 
-    async status(repoId: string) {
-        const repo = await this.repoRepository.findOne({where: {repoId}});
-        if (!repo) throw new NotFoundException('Repository not found');
-
-        const git = simpleGit(repo.gitPath);
+    async status(repoId: string, userId: string) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
         const st = await git.status();
 
         return [
@@ -141,8 +145,8 @@ export class ReposService {
         ];
     }
 
-    async addFilesToRepo(repoId: string, files?: string[]) {
-        const {git} = await this._getRepoAndGitInstance(repoId);
+    async addFilesToRepo(repoId: string, userId: string, files?: string[]) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
         const addTarget = files?.length ? files : '.';
         await git.add(addTarget);
 
@@ -150,8 +154,8 @@ export class ReposService {
         return {success: true, stagedFiles: status.staged || []};
     }
 
-    async commitToRepo(repoId: string, message: string, branch = 'main') {
-        const {git} = await this._getRepoAndGitInstance(repoId);
+    async commitToRepo(repoId: string, userId: string, message: string, branch = 'main') {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
 
         const current = (await git.revparse(['--abbrev-ref', 'HEAD'])).trim();
         if (current !== branch) {
@@ -170,11 +174,8 @@ export class ReposService {
         };
     }
 
-    async pushRepo(repoId: string, remote = 'origin', branch = 'main') {
-        const repo = await this.repoRepository.findOne({where: {repoId}});
-        if (!repo) throw new NotFoundException('Repo not found');
-
-        const git = simpleGit(repo.gitPath);
+    async pushRepo(repoId: string, userId: string, remote = 'origin', branch = 'main') {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
 
         let remoteExists = true;
         try {
@@ -203,11 +204,10 @@ export class ReposService {
             upToDate: false,
             pushed: res.pushed,
         };
-
     }
 
-    async getBranches(repoId: string, limit = 20) {
-        const {git} = await this._getRepoAndGitInstance(repoId);
+    async getBranches(repoId: string, userId: string, limit = 20) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
 
         const branchRes = await git.branchLocal();
         const branches = await Promise.all(
@@ -232,8 +232,8 @@ export class ReposService {
         return {branches};
     }
 
-    async getGraph(repoId: string, since?: string, max = 200) {
-        const {git} = await this._getRepoAndGitInstance(repoId);
+    async getGraph(repoId: string, userId: string, since?: string, max = 200) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
 
         const branchInfo = await git.branch(['-a']);
         const branches: Record<string, string> = {};
@@ -266,10 +266,10 @@ export class ReposService {
         return {branches, commits};
     }
 
-    async createLocalRemote(repoId: string, name = 'origin') {
-        const {repo, git: localGit} = await this._getRepoAndGitInstance(repoId);
+    async createLocalRemote(repoId: string, userId: string, name = 'origin') {
+        const {git: localGit} = await this._getRepoAndGitInstance(repoId, userId);
 
-        const remoteRepoPath = path.join(this.remoteBasePath, `${repo.repoId}.git`);
+        const remoteRepoPath = path.join(this.remoteBasePath, `${repoId}.git`);
 
         try {
             await fs.access(remoteRepoPath);
@@ -289,5 +289,26 @@ export class ReposService {
         }
 
         return {name, path: remoteRepoPath};
+    }
+
+    async createBranch(repoId: string, userId: string, newBranchName: string, baseBranchName?: string) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
+        const options = baseBranchName ? [baseBranchName] : [];
+        // 'checkoutLocalBranch'는 시작 브랜치를 지정할 수 없으므로, '-b' 옵션을 포함한 'checkout'을 사용합니다.
+        await git.checkout(['-b', newBranchName, ...options]);
+        return {success: true, message: `Branch '${newBranchName}' created.`};
+    }
+
+    async switchBranch(repoId: string, userId: string, branchName: string) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
+        await git.checkout(branchName);
+        const currentBranch = await git.revparse(['--abbrev-ref', 'HEAD']);
+        return {success: true, currentBranch};
+    }
+
+    async deleteBranch(repoId: string, userId: string, branchName: string) {
+        const {git} = await this._getRepoAndGitInstance(repoId, userId);
+        await git.deleteLocalBranch(branchName, true);
+        return {success: true, message: `Branch '${branchName}' deleted.`};
     }
 }
