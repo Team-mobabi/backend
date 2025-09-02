@@ -68,7 +68,9 @@ export class ReposService {
         try {
             await this.ensureDirectoryExists(savedRepo.gitPath);
             const git = simpleGit(savedRepo.gitPath);
-            await git.init();
+
+            await git.init(false, {'--initial-branch': 'main'});
+
             await git.addConfig('commit.gpgsign', 'false');
 
             await git.commit('Initial commit', undefined, {'--allow-empty': null, '--no-gpg-sign': null});
