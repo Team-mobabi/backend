@@ -4,10 +4,7 @@
     "enabled": true
   },
   "files": {
-    "include": [
-      "src/**/*.ts",
-      "test/**/*.ts"
-    ]
+    "include": ["src/**/*.ts", "test/**/*.ts"]
   },
   "formatter": {
     "enabled": true,
@@ -37,7 +34,7 @@
       "attributePosition": "multiline",
       "bracketSameLine": false,
       "semicolons": "always",
-      "trailingComma": "all",
+      "trailingCommas": "all",
       "quoteStyle": "double",
       "quoteProperties": "preserve"
     },
