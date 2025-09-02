@@ -24,6 +24,12 @@ export class ReposController {
         return this.reposService.createRepo(createRepoDto, user.id);
     }
 
+    @Get()
+    @HttpCode(HttpStatus.OK)
+    async getMyRepos(@AuthUser() user: User): Promise<Repo[]> {
+        return this.reposService.findReposByOwner(user.id);
+    }
+
     @Post(':repoId/add')
     @HttpCode(HttpStatus.OK)
     async addFiles(
