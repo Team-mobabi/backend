@@ -80,6 +80,13 @@ export class ReposService {
         }
     }
 
+    async findReposByOwner(userId: string): Promise<Repo[]> {
+        return this.repoRepository.find({
+            where: { ownerId: userId },
+            order: { createdAt: 'DESC' },
+        });
+    }
+
     async pullRepo(
         repoId: string,
         userId: string,
@@ -88,6 +95,14 @@ export class ReposService {
         ffOnly = false,
     ) {
         const {git} = await this._getRepoAndGitInstance(repoId, userId);
+
+        const remoteRefCheck = await git.raw(['ls-remote', '--heads', remote, branch]);
+        if (!remoteRefCheck) {
+            throw new ConflictException(
+                '원격 저장소가 비어있거나 브랜치가 없습니다. add -> commit -> push 작업을 먼저 진행해주세요.'
+            );
+        }
+
         await git.fetch(remote, branch);
 
         const localHash = (await git.revparse(['HEAD'])).trim();
