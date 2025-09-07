@@ -18,6 +18,10 @@ import { PushDto } from "./dto/push.dto";
 import { CreateLocalRemoteDto } from "./dto/create-local-remote.dto";
 import { AddDto } from "@src/repos/dto/add.dto";
 import { CommitDto } from "@src/repos/dto/commit.dto";
+import { CreatePullRequestDto } from "./dto/create-pull-request.dto";
+import { MergePullRequestDto } from "./dto/merge-pull-request.dto";
+import { CreateReviewDto } from "./dto/create-review.dto";
+import { PullRequestStatus } from "./entities/pull-request.entity";
 import { AuthGuard } from "@nestjs/passport";
 import { User } from "@src/users/entities/user.entity";
 import { AuthUser } from "@src/repos/auth-user.decorator";
@@ -184,5 +188,94 @@ export class ReposController {
     @AuthUser() user: User,
   ) {
     return this.reposService.deleteBranch(repoId, user.id, branchName);
+  }
+
+  @Post(":repoId/merge")
+  @HttpCode(HttpStatus.OK)
+  async mergeBranch(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Body("sourceBranch") sourceBranch: string,
+    @Body("targetBranch") targetBranch?: string,
+    @Body("fastForwardOnly") fastForwardOnly?: boolean,
+  ) {
+    return this.reposService.mergeBranch(
+      repoId,
+      user.id,
+      sourceBranch,
+      targetBranch,
+      fastForwardOnly || false,
+    );
+  }
+
+  @Post(":repoId/pull-requests")
+  @HttpCode(HttpStatus.CREATED)
+  async createPullRequest(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Body() createPullRequestDto: CreatePullRequestDto,
+  ) {
+    return this.reposService.createPullRequest(repoId, user.id, createPullRequestDto);
+  }
+
+  @Get(":repoId/pull-requests")
+  @HttpCode(HttpStatus.OK)
+  async getPullRequests(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("status") status?: PullRequestStatus,
+  ) {
+    return this.reposService.getPullRequests(repoId, user.id, status);
+  }
+
+  @Get(":repoId/pull-requests/:prId")
+  @HttpCode(HttpStatus.OK)
+  async getPullRequest(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.reposService.getPullRequest(repoId, user.id, prId);
+  }
+
+  @Post(":repoId/pull-requests/:prId/merge")
+  @HttpCode(HttpStatus.OK)
+  async mergePullRequest(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.reposService.mergePullRequest(repoId, user.id, prId, false);
+  }
+
+  @Post(":repoId/pull-requests/:prId/close")
+  @HttpCode(HttpStatus.OK)
+  async closePullRequest(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.reposService.closePullRequest(repoId, user.id, prId);
+  }
+
+  @Post(":repoId/pull-requests/:prId/reviews")
+  @HttpCode(HttpStatus.CREATED)
+  async createReview(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+    @Body() createReviewDto: CreateReviewDto,
+  ) {
+    return this.reposService.createReview(repoId, user.id, prId, createReviewDto);
+  }
+
+  @Get(":repoId/pull-requests/:prId/reviews")
+  @HttpCode(HttpStatus.OK)
+  async getReviews(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.reposService.getReviews(repoId, user.id, prId);
   }
 }

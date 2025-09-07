@@ -17,7 +17,7 @@ export class Repo {
   name: string;
 
   @Column({ type: "text", nullable: true })
-  description: string;
+  description: string | null;
 
   @Column({ default: false })
   isPrivate: boolean;

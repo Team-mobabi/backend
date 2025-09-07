@@ -10,7 +10,11 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 
 import { Repo } from "@src/repos/entities/repo.entity";
+import { PullRequest, PullRequestStatus } from "@src/repos/entities/pull-request.entity";
+import { PrReview, ReviewStatus } from "@src/repos/entities/pr-review.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
+import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
+import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
 
 import * as path from "node:path";
 import { promises as fs } from "node:fs";
@@ -31,6 +35,10 @@ export class ReposService {
   constructor(
     @InjectRepository(Repo)
     private readonly repoRepository: Repository<Repo>,
+    @InjectRepository(PullRequest)
+    private readonly pullRequestRepository: Repository<PullRequest>,
+    @InjectRepository(PrReview)
+    private readonly prReviewRepository: Repository<PrReview>,
     private readonly configService: ConfigService,
   ) {
     this.repoBasePath = this.configService.get<string>(
@@ -119,16 +127,18 @@ export class ReposService {
     repoId: string,
     userId: string,
     remote = "origin",
-    branch = "main",
+    branch?: string,
     ffOnly = false,
   ) {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
+    
+    const targetBranch = branch || (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
 
     const remoteRefCheck = await git.raw([
       "ls-remote",
       "--heads",
       remote,
-      branch,
+      targetBranch,
     ]);
     if (!remoteRefCheck) {
       throw new ConflictException(
@@ -136,10 +146,10 @@ export class ReposService {
       );
     }
 
-    await git.fetch(remote, branch);
+    await git.fetch(remote, targetBranch);
 
     const localHash = (await git.revparse(["HEAD"])).trim();
-    const remoteHash = (await git.revparse([`${remote}/${branch}`])).trim();
+    const remoteHash = (await git.revparse([`${remote}/${targetBranch}`])).trim();
 
     if (localHash === remoteHash) {
       throw new HttpException("", HttpStatus.NO_CONTENT);
@@ -155,7 +165,7 @@ export class ReposService {
     }
 
     try {
-      await git.pull(remote, branch, ffOnly ? { "--ff-only": null } : {});
+      await git.pull(remote, targetBranch, ffOnly ? { "--ff-only": null } : {});
     } catch (err) {
       if (/merge conflict/i.test(err.message)) {
         throw new ConflictException("Merge conflict");
@@ -216,7 +226,6 @@ export class ReposService {
   ) {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
 
-    // branch 파라미터가 있으면 해당 브랜치로 체크아웃, 없으면 현재 브랜치에서 커밋
     if (branch) {
       const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
       if (current !== branch) {
@@ -242,13 +251,15 @@ export class ReposService {
     repoId: string,
     userId: string,
     remote = "origin",
-    branch = "main",
+    branch?: string,
   ) {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
+    
+    const targetBranch = branch || (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
 
     let remoteExists = true;
     try {
-      await git.raw(["rev-parse", "--verify", `${remote}/${branch}`]);
+      await git.raw(["rev-parse", "--verify", `${remote}/${targetBranch}`]);
     } catch {
       remoteExists = false;
     }
@@ -260,7 +271,7 @@ export class ReposService {
           "rev-list",
           "--left-right",
           "--count",
-          `${remote}/${branch}...HEAD`,
+          `${remote}/${targetBranch}...HEAD`,
         ])
       )
         .trim()
@@ -273,7 +284,7 @@ export class ReposService {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    const res = await git.push(remote, branch);
+    const res = await git.push(remote, targetBranch);
 
     return {
       success: true,
@@ -358,7 +369,7 @@ export class ReposService {
     } catch {
       await fs.mkdir(remoteRepoPath, { recursive: true });
       const bareGit = simpleGit(remoteRepoPath);
-      await bareGit.init(true); // --bare
+      await bareGit.init(true);
     }
 
     const remotes = await localGit.getRemotes(true);
@@ -381,7 +392,6 @@ export class ReposService {
   ) {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
     const options = baseBranchName ? [baseBranchName] : [];
-    // 'checkoutLocalBranch'는 시작 브랜치를 지정할 수 없으므로, '-b' 옵션을 포함한 'checkout'을 사용합니다.
     await git.checkout(["-b", newBranchName, ...options]);
     return { success: true, message: `Branch '${newBranchName}' created.` };
   }
@@ -397,5 +407,228 @@ export class ReposService {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
     await git.deleteLocalBranch(branchName, true);
     return { success: true, message: `Branch '${branchName}' deleted.` };
+  }
+
+  async mergeBranch(
+    repoId: string,
+    userId: string,
+    sourceBranch: string,
+    targetBranch?: string,
+    fastForwardOnly = false,
+  ) {
+    const { git } = await this._getRepoAndGitInstance(repoId, userId);
+    
+    // 타겟 브랜치가 지정되지 않으면 현재 브랜치 사용
+    const currentBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    const finalTargetBranch = targetBranch || currentBranch;
+    
+    if (currentBranch !== finalTargetBranch) {
+      await git.checkout(finalTargetBranch);
+    }
+    
+    const beforeHash = (await git.revparse(["HEAD"])).trim();
+    
+    try {
+      if (fastForwardOnly) {
+        throw new ConflictException("Fast-forward merge is not allowed. Use 3-way merge only.");
+      }
+      
+      await git.merge([sourceBranch, "--no-ff"]);
+      
+      const afterHash = (await git.revparse(["HEAD"])).trim();
+      const fastForward = beforeHash !== afterHash;
+      
+      return {
+        success: true,
+        fastForward,
+        from: beforeHash,
+        to: afterHash,
+        sourceBranch,
+        targetBranch: finalTargetBranch,
+      };
+    } catch (err) {
+      if (/merge conflict/i.test(err.message)) {
+        throw new ConflictException("Merge conflict detected. Please resolve conflicts manually.");
+      }
+      if (/fast-forward/i.test(err.message)) {
+        throw new ConflictException("Fast-forward merge not possible");
+      }
+      throw new InternalServerErrorException(`Merge failed: ${err.message}`);
+    }
+  }
+
+  async createPullRequest(
+    repoId: string,
+    userId: string,
+    createPullRequestDto: CreatePullRequestDto,
+  ) {
+    const { git } = await this._getRepoAndGitInstance(repoId, userId);
+    
+    const branches = await git.branchLocal();
+    if (!branches.all.includes(createPullRequestDto.sourceBranch)) {
+      throw new NotFoundException(`Source branch '${createPullRequestDto.sourceBranch}' not found`);
+    }
+    if (!branches.all.includes(createPullRequestDto.targetBranch)) {
+      throw new NotFoundException(`Target branch '${createPullRequestDto.targetBranch}' not found`);
+    }
+
+    if (createPullRequestDto.sourceBranch === createPullRequestDto.targetBranch) {
+      throw new ConflictException("Source and target branches cannot be the same");
+    }
+
+    const existingPR = await this.pullRequestRepository.findOne({
+      where: {
+        repoId,
+        sourceBranch: createPullRequestDto.sourceBranch,
+        targetBranch: createPullRequestDto.targetBranch,
+        status: PullRequestStatus.OPEN,
+      },
+    });
+
+    if (existingPR) {
+      throw new ConflictException("A pull request already exists for these branches");
+    }
+
+    const pullRequest = this.pullRequestRepository.create({
+      ...createPullRequestDto,
+      repoId,
+      authorId: userId,
+      status: PullRequestStatus.OPEN,
+    });
+
+    return this.pullRequestRepository.save(pullRequest);
+  }
+
+  async getPullRequests(repoId: string, userId: string, status?: PullRequestStatus) {
+    await this._getRepoAndGitInstance(repoId, userId);
+
+    const whereCondition: { repoId: string; status?: PullRequestStatus } = { repoId };
+    if (status) {
+      whereCondition.status = status;
+    }
+
+    return this.pullRequestRepository.find({
+      where: whereCondition,
+      order: { createdAt: "DESC" },
+    });
+  }
+
+  async getPullRequest(repoId: string, userId: string, prId: string) {
+    await this._getRepoAndGitInstance(repoId, userId);
+
+    const pullRequest = await this.pullRequestRepository.findOne({
+      where: { id: prId, repoId },
+    });
+
+    if (!pullRequest) {
+      throw new NotFoundException("Pull request not found");
+    }
+
+    return pullRequest;
+  }
+
+  async mergePullRequest(
+    repoId: string,
+    userId: string,
+    prId: string,
+    fastForwardOnly = false,
+  ) {
+    const pullRequest = await this.getPullRequest(repoId, userId, prId);
+
+    if (pullRequest.status !== PullRequestStatus.OPEN) {
+      throw new ConflictException("Pull request is not open");
+    }
+
+    // 승인 필수인 경우 승인 상태 확인
+    if (pullRequest.requiresApproval) {
+      const approvedReviews = await this.prReviewRepository.find({
+        where: {
+          pullRequestId: prId,
+          status: ReviewStatus.APPROVED,
+        },
+      });
+
+      if (approvedReviews.length === 0) {
+        throw new ConflictException("Pull request requires at least one approval before merging");
+      }
+    }
+
+    const mergeResult = await this.mergeBranch(
+      repoId,
+      userId,
+      pullRequest.sourceBranch,
+      pullRequest.targetBranch,
+      fastForwardOnly,
+    );
+    pullRequest.status = PullRequestStatus.MERGED;
+    pullRequest.mergedAt = new Date();
+    pullRequest.mergedBy = userId;
+    pullRequest.mergeCommitHash = mergeResult.to;
+
+    await this.pullRequestRepository.save(pullRequest);
+
+    return {
+      ...mergeResult,
+      pullRequest,
+    };
+  }
+
+  async closePullRequest(repoId: string, userId: string, prId: string) {
+    const pullRequest = await this.getPullRequest(repoId, userId, prId);
+
+    if (pullRequest.status !== PullRequestStatus.OPEN) {
+      throw new ConflictException("Pull request is not open");
+    }
+
+    pullRequest.status = PullRequestStatus.CLOSED;
+    await this.pullRequestRepository.save(pullRequest);
+
+    return pullRequest;
+  }
+
+  async createReview(
+    repoId: string,
+    userId: string,
+    prId: string,
+    createReviewDto: CreateReviewDto,
+  ) {
+    const pullRequest = await this.getPullRequest(repoId, userId, prId);
+
+    if (pullRequest.status !== PullRequestStatus.OPEN) {
+      throw new ConflictException("Cannot review a closed pull request");
+    }
+
+    // 자신이 생성한 PR에는 리뷰 불가
+    if (pullRequest.authorId === userId) {
+      throw new ConflictException("Cannot review your own pull request");
+    }
+    let review = await this.prReviewRepository.findOne({
+      where: {
+        pullRequestId: prId,
+        reviewerId: userId,
+      },
+    });
+
+    if (review) {
+      review.status = createReviewDto.status;
+      review.comment = createReviewDto.comment || null;
+    } else {
+      review = this.prReviewRepository.create({
+        pullRequestId: prId,
+        reviewerId: userId,
+        ...createReviewDto,
+      });
+    }
+
+    return this.prReviewRepository.save(review);
+  }
+
+  async getReviews(repoId: string, userId: string, prId: string) {
+    await this.getPullRequest(repoId, userId, prId);
+
+    return this.prReviewRepository.find({
+      where: { pullRequestId: prId },
+      order: { createdAt: "DESC" },
+    });
   }
 }

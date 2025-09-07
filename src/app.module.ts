@@ -7,6 +7,8 @@ import { ReposModule } from "@src/repos/repos.module";
 import { AuthModule } from "@src/auth/auth.module";
 
 import { Repo } from "@src/repos/entities/repo.entity";
+import { PullRequest } from "@src/repos/entities/pull-request.entity";
+import { PrReview } from "@src/repos/entities/pr-review.entity";
 import { User } from "@src/users/entities/user.entity";
 
 import * as Joi from "joi";
@@ -38,7 +40,7 @@ import * as Joi from "joi";
         username: configService.get<string>("DB_USERNAME"),
         password: configService.get<string>("DB_PASSWORD"),
         database: configService.get<string>("DB_DATABASE"),
-        entities: [Repo, User],
+        entities: [Repo, PullRequest, PrReview, User],
         synchronize: configService.get<string>("ENV") !== "prod",
       }),
       inject: [ConfigService],
