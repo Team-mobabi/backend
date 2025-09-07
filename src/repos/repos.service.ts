@@ -212,13 +212,16 @@ export class ReposService {
     repoId: string,
     userId: string,
     message: string,
-    branch = "main",
+    branch?: string,
   ) {
     const { git } = await this._getRepoAndGitInstance(repoId, userId);
 
-    const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
-    if (current !== branch) {
-      await git.checkout(["-B", branch]);
+    // branch 파라미터가 있으면 해당 브랜치로 체크아웃, 없으면 현재 브랜치에서 커밋
+    if (branch) {
+      const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+      if (current !== branch) {
+        await git.checkout(["-B", branch]);
+      }
     }
 
     const commitResult = await git.commit(message, undefined, {

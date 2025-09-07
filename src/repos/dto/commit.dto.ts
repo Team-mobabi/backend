@@ -1,7 +1,11 @@
-import { IsString, Length } from "class-validator";
+import { IsOptional, IsString, Length } from "class-validator";
 
 export class CommitDto {
   @IsString()
   @Length(1, 255)
   message: string;
+
+  @IsOptional()
+  @IsString()
+  branch?: string;
 }

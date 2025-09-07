@@ -59,7 +59,7 @@ export class ReposController {
     @Body() commitDto: CommitDto,
     @AuthUser() user: User,
   ) {
-    return this.reposService.commitToRepo(repoId, user.id, commitDto.message);
+    return this.reposService.commitToRepo(repoId, user.id, commitDto.message, commitDto.branch);
   }
 
   @Post(":repoId/remote")
