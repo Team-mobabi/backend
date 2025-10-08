@@ -1,3 +1,12 @@
+import { IsOptional, IsBoolean } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
 export class MergePullRequestDto {
-  // 빈 DTO - 모든 속성 허용하지 않음
+  @ApiPropertyOptional({
+    description: 'Fast-forward merge만 허용할지 여부',
+    default: false
+  })
+  @IsOptional()
+  @IsBoolean()
+  fastForwardOnly?: boolean = false;
 }

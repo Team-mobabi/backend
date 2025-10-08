@@ -15,10 +15,11 @@
         "./src/*"
       ],
       "@test/*": [
-        ".test/*"
+        "./test/*"
       ]
     },
-    "include": ["src/**/*"],
+
+
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": true,
@@ -26,5 +27,7 @@
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
-  }
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

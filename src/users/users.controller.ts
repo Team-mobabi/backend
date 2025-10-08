@@ -1,13 +1,19 @@
 import { Controller, Get, UseGuards, Request } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
-import { UsersService } from "./users.service";
+import { UsersService } from "@src/users/users.service";
 import { AuthGuard } from "@nestjs/passport";
-import { User } from "./entities/user.entity";
+import { User } from "@src/users/entities/user.entity";
 
+@ApiTags("users")
+@ApiBearerAuth("JWT-auth")
 @Controller("users")
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @ApiOperation({ summary: "내 정보 조회" })
+  @ApiResponse({ status: 200, description: "사용자 정보 반환", type: User })
+  @ApiResponse({ status: 401, description: "인증 실패" })
   @UseGuards(AuthGuard("jwt"))
   @Get("/me")
   getMyInfo(@Request() req: ExpressRequest): Promise<User | null> {
