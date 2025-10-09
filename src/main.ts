@@ -12,7 +12,7 @@ async function bootstrap() {
     origin: [
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://www.wisoft.io",
+      "https://daisy.wisoft.io",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
