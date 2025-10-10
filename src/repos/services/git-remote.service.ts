@@ -94,11 +94,22 @@ export class GitRemoteService extends BaseRepoService {
     userId: string,
     remote = "origin",
     branch?: string,
+    setUpstream = true,
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     const targetBranch =
       branch || (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+    // 로컬 브랜치가 존재하는지 확인
+    try {
+      await git.raw(["rev-parse", "--verify", targetBranch]);
+    } catch {
+      throw new GitOperationException(
+        "push",
+        `브랜치 '${targetBranch}'를 찾을 수 없습니다.`,
+      );
+    }
 
     let remoteExists = true;
     try {
@@ -127,7 +138,9 @@ export class GitRemoteService extends BaseRepoService {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    const res = await git.push(remote, targetBranch);
+    // 처음 push하는 브랜치이고 setUpstream이 true면 --set-upstream 옵션 추가
+    const pushOptions = (!remoteExists && setUpstream) ? ['--set-upstream'] : [];
+    const res = await git.push(remote, targetBranch, pushOptions);
 
     return {
       success: true,

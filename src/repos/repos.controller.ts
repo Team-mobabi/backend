@@ -6,8 +6,8 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
-  Put,
   Query,
   UploadedFiles,
   UseGuards,
@@ -31,6 +31,7 @@ import { PullRequestService } from "@src/repos/services/pull-request.service";
 import { FileService } from "@src/repos/services/file.service";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
+import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
 import { PushDto } from "@src/repos/dto/push.dto";
 import { CreateLocalRemoteDto } from "@src/repos/dto/create-local-remote.dto";
@@ -90,6 +91,47 @@ export class ReposController {
   @HttpCode(HttpStatus.OK)
   async getMyRepos(@AuthUser() user: User): Promise<Repo[]> {
     return this.reposService.findReposByOwner(user.id);
+  }
+
+  @ApiOperation({ summary: "공개 레포지토리 목록 조회" })
+  @ApiResponse({
+    status: 200,
+    description: "공개 레포지토리 목록 반환",
+    type: [Repo],
+  })
+  @Get("public")
+  @HttpCode(HttpStatus.OK)
+  async getPublicRepos(): Promise<Repo[]> {
+    return this.reposService.findPublicRepos();
+  }
+
+  @ApiOperation({ summary: "특정 사용자의 공개 레포지토리 목록 조회" })
+  @ApiResponse({
+    status: 200,
+    description: "사용자의 공개 레포지토리 목록 반환",
+    type: [Repo],
+  })
+  @Get("public/user/:userId")
+  @HttpCode(HttpStatus.OK)
+  async getPublicReposByUser(
+    @Param("userId") userId: string,
+  ): Promise<Repo[]> {
+    return this.reposService.findPublicReposByOwner(userId);
+  }
+
+  @ApiOperation({ summary: "레포지토리 Fork" })
+  @ApiResponse({
+    status: 201,
+    description: "레포지토리가 성공적으로 Fork됨",
+    type: Repo,
+  })
+  @Post("fork")
+  @HttpCode(HttpStatus.CREATED)
+  async forkRepo(
+    @Body() forkRepoDto: ForkRepoDto,
+    @AuthUser() user: User,
+  ): Promise<Repo> {
+    return this.reposService.forkRepo(forkRepoDto, user.id);
   }
 
   @ApiOperation({ summary: "파일 스테이징" })
@@ -168,6 +210,7 @@ export class ReposController {
       user.id,
       pushDto.remote,
       pushDto.branch,
+      pushDto.setUpstream,
     );
   }
 
@@ -446,7 +489,6 @@ export class ReposController {
     @UploadedFiles() files?: Express.Multer.File[],
     @Body() body?: any,
   ) {
-    // multipart/form-data로 파일이 업로드된 경우
     if (files && files.length > 0) {
       const uploadPath = body?.path || "";
       const overwrite = Boolean(body?.overwrite) || String(body?.overwrite) === 'true';
@@ -474,7 +516,7 @@ export class ReposController {
 
   @ApiOperation({ summary: "파일 내용 수정" })
   @ApiResponse({ status: 200, description: "파일이 성공적으로 수정됨" })
-  @Put(":repoId/files")
+  @Patch(":repoId/files")
   @HttpCode(HttpStatus.OK)
   async updateFile(
     @Param("repoId") repoId: string,

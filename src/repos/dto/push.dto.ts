@@ -1,4 +1,4 @@
-import { IsString, IsOptional, Length } from "class-validator";
+import { IsString, IsOptional, Length, IsBoolean } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class PushDto {
@@ -24,4 +24,13 @@ export class PushDto {
   @IsOptional()
   @Length(1, 100)
   branch?: string;
+
+  @ApiPropertyOptional({
+    description: "upstream 설정 여부 (처음 push하는 브랜치일 때 자동으로 upstream 설정)",
+    example: true,
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  setUpstream?: boolean = true;
 }

@@ -52,6 +52,14 @@ export class Repo {
   gitPath: string;
 
   @ApiProperty({
+    description: "Fork 출처 레포지토리 ID",
+    example: "123e4567-e89b-12d3-a456-426614174000",
+    nullable: true,
+  })
+  @Column({ nullable: true })
+  forkedFrom: string | null;
+
+  @ApiProperty({
     description: "레포지토리 생성일",
     example: "2024-01-01T00:00:00.000Z",
   })
