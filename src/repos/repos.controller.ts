@@ -213,7 +213,33 @@ export class ReposController {
     );
   }
 
-  @ApiOperation({ summary: "원격 저장소에서 Pull" })
+  @ApiOperation({
+    summary: "원격 저장소에서 Pull",
+    description: `원격 저장소의 변경사항을 로컬로 가져옵니다.
+
+**요청 예시:**
+\`\`\`json
+{
+  "remote": "origin",      // 선택사항, 기본값: "origin"
+  "branch": "main",        // 선택사항, 생략시 현재 브랜치
+  "ffOnly": false          // 선택사항, fast-forward only 여부
+}
+\`\`\`
+
+**빈 객체로 요청 (현재 브랜치 pull):**
+\`\`\`json
+{}
+\`\`\`
+
+**curl 예시:**
+\`\`\`bash
+curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"remote": "origin", "branch": "main"}'
+\`\`\`
+`
+  })
   @ApiResponse({ status: 200, description: "Pull이 성공적으로 완료됨" })
   @Post(":repoId/pull")
   @HttpCode(HttpStatus.OK)
@@ -239,7 +265,34 @@ export class ReposController {
     return { files };
   }
 
-  @ApiOperation({ summary: "원격 저장소로 Push" })
+  @ApiOperation({
+    summary: "원격 저장소로 Push",
+    description: `로컬 변경사항을 원격 저장소로 업로드합니다.
+
+**요청 예시:**
+\`\`\`json
+{
+  "remote": "origin",   // 선택사항, 기본값: "origin"
+  "branch": "main"      // 선택사항, 생략시 현재 브랜치
+}
+\`\`\`
+
+**빈 객체로 요청 (현재 브랜치 push):**
+\`\`\`json
+{}
+\`\`\`
+
+**curl 예시:**
+\`\`\`bash
+curl -X POST "http://localhost:6101/repos/:repoId/push" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"remote": "origin", "branch": "main"}'
+\`\`\`
+
+**참고:** upstream이 설정되지 않은 경우 자동으로 \`--set-upstream\` 옵션이 적용됩니다.
+`
+  })
   @ApiResponse({ status: 200, description: "Push가 성공적으로 완료됨" })
   @Post(":repoId/push")
   @HttpCode(HttpStatus.OK)
@@ -488,18 +541,68 @@ export class ReposController {
     description: `Content-Type에 따라 다르게 동작합니다.
 
 **방법 1: 텍스트 파일 생성 (application/json)**
-- 하나의 텍스트 파일을 생성합니다.
-- filename, content 필드 필수
+\`\`\`json
+POST /repos/:repoId/files
+Content-Type: application/json
+
+{
+  "filename": "README.md",
+  "content": "# Hello World",
+  "path": "docs",
+  "overwrite": false
+}
+\`\`\`
 
 **방법 2: 파일 업로드 (multipart/form-data)**
-- 여러 파일을 동시에 업로드할 수 있습니다 (최대 10개)
-- 각 파일은 최대 10MB까지 가능
-- files 필드에 여러 파일 선택 가능
-- 이미지, PDF 등 모든 바이너리 파일 지원
 
-**예시:**
-- 단일 파일: files 필드에 1개 파일 선택
-- 여러 파일: files 필드에 여러 개 파일 선택 (Ctrl/Cmd+클릭)
+📤 **단일 파일 업로드**
+\`\`\`bash
+curl -X POST "http://localhost:6101/repos/:repoId/files" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -F "files=@/path/to/image.png" \\
+  -F "path=uploads" \\
+  -F "overwrite=false"
+\`\`\`
+
+📤 **여러 파일 동시 업로드 (최대 10개)**
+\`\`\`bash
+curl -X POST "http://localhost:6101/repos/:repoId/files" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -F "files=@/path/to/file1.png" \\
+  -F "files=@/path/to/file2.pdf" \\
+  -F "files=@/path/to/file3.zip" \\
+  -F "path=uploads" \\
+  -F "overwrite=false"
+\`\`\`
+
+📮 **Postman에서 사용법:**
+1. Body 탭 선택
+2. form-data 선택
+3. Key: "files", Type: File 선택 후 파일 선택
+4. 여러 파일: 같은 Key "files"로 여러 행 추가
+5. Key: "path" (선택), Value: "uploads"
+6. Key: "overwrite" (선택), Value: "false"
+
+🌐 **JavaScript (Fetch API)**
+\`\`\`javascript
+const formData = new FormData();
+formData.append('files', file1);
+formData.append('files', file2);  // 같은 키로 여러 개 추가
+formData.append('files', file3);
+formData.append('path', 'uploads');
+formData.append('overwrite', 'false');
+
+fetch('/repos/:repoId/files', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer YOUR_TOKEN' },
+  body: formData
+});
+\`\`\`
+
+**제한:**
+- 최대 10개 파일 동시 업로드
+- 각 파일 최대 10MB
+- 모든 파일 형식 지원 (이미지, PDF, ZIP 등)
 `
   })
   @ApiResponse({
