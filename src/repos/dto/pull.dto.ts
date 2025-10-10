@@ -1,7 +1,7 @@
-import { IsString, IsOptional, Length } from "class-validator";
+import { IsString, IsOptional, IsBoolean, Length } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
-export class PushDto {
+export class PullDto {
   @ApiPropertyOptional({
     description: "원격 저장소 이름",
     example: "origin",
@@ -15,7 +15,7 @@ export class PushDto {
   remote?: string;
 
   @ApiPropertyOptional({
-    description: "푸시할 브랜치 이름 (생략 시 현재 브랜치)",
+    description: "Pull할 브랜치 이름 (생략 시 현재 브랜치)",
     example: "main",
     minLength: 1,
     maxLength: 100,
@@ -24,4 +24,13 @@ export class PushDto {
   @IsOptional()
   @Length(1, 100)
   branch?: string;
+
+  @ApiPropertyOptional({
+    description: "Fast-forward only 병합 (강제 fast-forward)",
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  ffOnly?: boolean;
 }

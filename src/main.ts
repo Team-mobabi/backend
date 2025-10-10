@@ -14,7 +14,7 @@ async function bootstrap() {
       "http://localhost:5173",
       "https://daisy.wisoft.io",
     ],
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
   });

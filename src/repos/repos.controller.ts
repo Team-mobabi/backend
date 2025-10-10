@@ -34,6 +34,7 @@ import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
 import { PushDto } from "@src/repos/dto/push.dto";
+import { PullDto } from "@src/repos/dto/pull.dto";
 import { CreateLocalRemoteDto } from "@src/repos/dto/create-local-remote.dto";
 import { AddDto } from "@src/repos/dto/add.dto";
 import { CommitDto } from "@src/repos/dto/commit.dto";
@@ -184,8 +185,18 @@ export class ReposController {
   @ApiResponse({ status: 200, description: "Pull이 성공적으로 완료됨" })
   @Post(":repoId/pull")
   @HttpCode(HttpStatus.OK)
-  pull(@Param("repoId") repoId: string, @AuthUser() user: User) {
-    return this.gitRemoteService.pullRepo(repoId, user.id);
+  pull(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Body() pullDto: PullDto,
+  ) {
+    return this.gitRemoteService.pullRepo(
+      repoId,
+      user.id,
+      pullDto.remote,
+      pullDto.branch,
+      pullDto.ffOnly,
+    );
   }
 
   @ApiOperation({ summary: "저장소 상태 조회" })
@@ -210,7 +221,6 @@ export class ReposController {
       user.id,
       pushDto.remote,
       pushDto.branch,
-      pushDto.setUpstream,
     );
   }
 

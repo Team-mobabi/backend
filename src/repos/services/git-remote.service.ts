@@ -94,7 +94,6 @@ export class GitRemoteService extends BaseRepoService {
     userId: string,
     remote = "origin",
     branch?: string,
-    setUpstream = true,
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
@@ -138,9 +137,7 @@ export class GitRemoteService extends BaseRepoService {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    // 처음 push하는 브랜치이고 setUpstream이 true면 --set-upstream 옵션 추가
-    const pushOptions = (!remoteExists && setUpstream) ? ['--set-upstream'] : [];
-    const res = await git.push(remote, targetBranch, pushOptions);
+    const res = await git.push(remote, targetBranch);
 
     return {
       success: true,
