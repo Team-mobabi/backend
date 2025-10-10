@@ -115,7 +115,7 @@ export class PullRequest {
     description: "연결된 레포지토리",
     type: () => Repo,
   })
-  @ManyToOne(() => Repo)
+  @ManyToOne(() => Repo, { onDelete: "CASCADE" })
   @JoinColumn({ name: "repoId" })
   repo: Repo;
 

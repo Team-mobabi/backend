@@ -82,6 +82,38 @@ export class ReposController {
     return this.reposService.createRepo(createRepoDto, user.id);
   }
 
+  @ApiOperation({
+    summary: "레포지토리 삭제",
+    description: "레포지토리와 관련된 모든 데이터를 삭제합니다. 로컬 git 디렉토리, 리모트 디렉토리, DB 엔티티가 모두 삭제됩니다."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "레포지토리가 성공적으로 삭제됨",
+    schema: {
+      type: "object",
+      properties: {
+        success: { type: "boolean", example: true }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 403,
+    description: "권한 없음 - 레포지토리 소유자만 삭제 가능",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "레포지토리를 찾을 수 없음",
+  })
+  @Delete(":repoId")
+  @HttpCode(HttpStatus.OK)
+  async deleteRepo(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+  ): Promise<{ success: boolean }> {
+    await this.reposService.deleteRepo(repoId, user.id);
+    return { success: true };
+  }
+
   @ApiOperation({ summary: "내 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
@@ -453,9 +485,45 @@ export class ReposController {
 
   @ApiOperation({
     summary: "파일 생성 또는 업로드",
-    description: "Content-Type에 따라 다르게 동작합니다.\n\n- application/json: 텍스트 파일 생성\n- multipart/form-data: 바이너리 파일 업로드"
+    description: `Content-Type에 따라 다르게 동작합니다.
+
+**방법 1: 텍스트 파일 생성 (application/json)**
+- 하나의 텍스트 파일을 생성합니다.
+- filename, content 필드 필수
+
+**방법 2: 파일 업로드 (multipart/form-data)**
+- 여러 파일을 동시에 업로드할 수 있습니다 (최대 10개)
+- 각 파일은 최대 10MB까지 가능
+- files 필드에 여러 파일 선택 가능
+- 이미지, PDF 등 모든 바이너리 파일 지원
+
+**예시:**
+- 단일 파일: files 필드에 1개 파일 선택
+- 여러 파일: files 필드에 여러 개 파일 선택 (Ctrl/Cmd+클릭)
+`
   })
-  @ApiResponse({ status: 201, description: "파일이 성공적으로 생성/업로드됨" })
+  @ApiResponse({
+    status: 201,
+    description: "파일이 성공적으로 생성/업로드됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        uploadedFiles: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              filename: { type: 'string', example: 'image.png' },
+              path: { type: 'string', example: 'uploads/image.png' },
+              size: { type: 'number', example: 1024000 },
+              mimetype: { type: 'string', example: 'image/png' }
+            }
+          }
+        }
+      }
+    }
+  })
   @ApiConsumes('application/json', 'multipart/form-data')
   @ApiBody({
     schema: {

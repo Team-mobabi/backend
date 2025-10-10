@@ -38,15 +38,46 @@ export class GitRemoteService extends BaseRepoService {
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
-    const targetBranch =
-      branch || (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    // 브랜치 이름 가져오기 (에러 처리 추가)
+    let targetBranch: string;
+    if (branch) {
+      targetBranch = branch;
+    } else {
+      try {
+        targetBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+      } catch (err) {
+        throw new GitOperationException(
+          "pull",
+          "현재 브랜치를 확인할 수 없습니다.",
+        );
+      }
+    }
 
-    const remoteRefCheck = await git.raw([
-      "ls-remote",
-      "--heads",
-      remote,
-      targetBranch,
-    ]);
+    // 리모트 존재 여부 확인
+    const remotes = await git.getRemotes();
+    if (!remotes.find((r) => r.name === remote)) {
+      throw new GitOperationException(
+        "pull",
+        `리모트 '${remote}'가 설정되지 않았습니다.`,
+      );
+    }
+
+    // 리모트 브랜치 존재 여부 확인
+    let remoteRefCheck: string;
+    try {
+      remoteRefCheck = await git.raw([
+        "ls-remote",
+        "--heads",
+        remote,
+        targetBranch,
+      ]);
+    } catch (err) {
+      throw new GitOperationException(
+        "pull",
+        `리모트 '${remote}'에 접근할 수 없습니다: ${err.message}`,
+      );
+    }
+
     if (!remoteRefCheck) {
       throw new RemoteEmptyException();
     }
@@ -96,8 +127,29 @@ export class GitRemoteService extends BaseRepoService {
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
-    const targetBranch =
-      branch || (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+    // 브랜치 이름 가져오기 (에러 처리 추가)
+    let targetBranch: string;
+    if (branch) {
+      targetBranch = branch;
+    } else {
+      try {
+        targetBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+      } catch (err) {
+        throw new GitOperationException(
+          "push",
+          "현재 브랜치를 확인할 수 없습니다.",
+        );
+      }
+    }
+
+    // 리모트 존재 여부 확인
+    const remotes = await git.getRemotes();
+    if (!remotes.find((r) => r.name === remote)) {
+      throw new GitOperationException(
+        "push",
+        `리모트 '${remote}'가 설정되지 않았습니다.`,
+      );
+    }
 
     // 로컬 브랜치가 존재하는지 확인
     try {
@@ -136,13 +188,33 @@ export class GitRemoteService extends BaseRepoService {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    const res = await git.push(remote, targetBranch);
-
-    return {
-      success: true,
-      upToDate: false,
-      pushed: res.pushed,
-    };
+    // push 실행 (upstream 미설정 에러 처리)
+    try {
+      const res = await git.push(remote, targetBranch);
+      return {
+        success: true,
+        upToDate: false,
+        pushed: res.pushed,
+      };
+    } catch (err) {
+      // upstream이 설정되지 않은 경우 자동으로 설정하고 재시도
+      if (/no upstream branch|set-upstream/i.test(err.message)) {
+        try {
+          const res = await git.push(remote, targetBranch, ["--set-upstream"]);
+          return {
+            success: true,
+            upToDate: false,
+            pushed: res.pushed,
+          };
+        } catch (retryErr) {
+          throw new GitOperationException(
+            "push",
+            `Push 실패: ${retryErr.message}`,
+          );
+        }
+      }
+      throw new GitOperationException("push", err.message);
+    }
   }
 
   async addRemote(

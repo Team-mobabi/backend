@@ -61,7 +61,7 @@ export class PrReview {
     description: "연결된 Pull Request",
     type: () => PullRequest,
   })
-  @ManyToOne(() => PullRequest)
+  @ManyToOne(() => PullRequest, { onDelete: "CASCADE" })
   @JoinColumn({ name: "pullRequestId" })
   pullRequest: PullRequest;
 
