@@ -24,10 +24,9 @@ export class GitRemoteService extends BaseRepoService {
     configService: ConfigService,
   ) {
     super(repoRepository, configService);
-    this.remoteBasePath = this.configService.get<string>(
-      "REMOTE_LOCAL_BASE_PATH",
-      "data/remote",
-    );
+    const env = this.configService.get<string>("ENV", "dev");
+    const pathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
+    this.remoteBasePath = this.configService.get<string>(pathKey, "data/remote");
   }
 
   async pullRepo(

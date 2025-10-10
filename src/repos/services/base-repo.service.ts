@@ -20,10 +20,9 @@ export abstract class BaseRepoService {
     protected readonly repoRepository: Repository<Repo>,
     protected readonly configService: ConfigService,
   ) {
-    this.repoBasePath = this.configService.get<string>(
-      "REPO_LOCAL_BASE_PATH",
-      "data/git",
-    );
+    const env = this.configService.get<string>("ENV", "dev");
+    const pathKey = env === "prod" ? "REPO_BASE_PATH" : "REPO_LOCAL_BASE_PATH";
+    this.repoBasePath = this.configService.get<string>(pathKey, "data/git");
   }
 
   protected async getRepoAndGit(
