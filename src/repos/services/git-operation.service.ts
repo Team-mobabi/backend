@@ -24,13 +24,30 @@ export class GitOperationService extends BaseRepoService {
     try {
       const st = await git.status();
 
-      return [
+      // 변경사항 목록
+      const changes = [
         ...st.modified.map((f) => ({ name: f, status: "modified" })),
         ...st.not_added.map((f) => ({ name: f, status: "untracked" })),
         ...st.created.map((f) => ({ name: f, status: "added" })),
         ...st.deleted.map((f) => ({ name: f, status: "deleted" })),
         ...st.renamed.map((r) => ({ name: r.to, status: "renamed" })),
       ];
+
+      // 전체 파일 목록 (커밋된 파일 포함)
+      let allFiles: string[] = [];
+      try {
+        const filesOutput = await git.raw(["ls-files"]);
+        allFiles = filesOutput.trim().split("\n").filter(Boolean);
+      } catch {
+        // 파일이 없거나 에러가 나면 빈 배열
+        allFiles = [];
+      }
+
+      return {
+        changes,           // 변경사항 (modified, untracked, added 등)
+        files: allFiles,   // 전체 파일 목록 (커밋된 파일 포함)
+        isEmpty: allFiles.length === 0  // 저장소가 비어있는지
+      };
     } catch (err) {
       throw new GitOperationException("status", err.message);
     }

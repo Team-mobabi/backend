@@ -257,12 +257,35 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
     );
   }
 
-  @ApiOperation({ summary: "저장소 상태 조회" })
+  @ApiOperation({
+    summary: "저장소 상태 조회",
+    description: `저장소의 현재 상태와 파일 목록을 반환합니다.
+
+**반환 데이터:**
+\`\`\`json
+{
+  "changes": [        // 변경사항 목록 (git status 결과)
+    { "name": "file.txt", "status": "modified" },
+    { "name": "new.txt", "status": "untracked" }
+  ],
+  "files": [          // 전체 파일 목록 (커밋된 파일 포함)
+    "file.txt",
+    "folder/file2.txt"
+  ],
+  "isEmpty": false    // 저장소가 비어있는지 (파일이 하나도 없으면 true)
+}
+\`\`\`
+
+**활용:**
+- \`isEmpty\`: 초기 업로드 화면 표시 여부 결정
+- \`files\`: 저장소 전체 파일 목록
+- \`changes\`: 변경된 파일만 표시 (git add 대상)
+`
+  })
   @ApiResponse({ status: 200, description: "저장소 상태 반환" })
   @Get(":repoId/status")
   async getStatus(@Param("repoId") repoId: string, @AuthUser() user: User) {
-    const files = await this.gitOperationService.status(repoId, user.id);
-    return { files };
+    return this.gitOperationService.status(repoId, user.id);
   }
 
   @ApiOperation({
