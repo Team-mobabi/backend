@@ -33,7 +33,7 @@ export class GitOperationService extends BaseRepoService {
         ...st.renamed.map((r) => ({ name: r.to, status: "renamed" })),
       ];
 
-      // 전체 파일 목록 (커밋된 파일 포함)
+      // 전체 파일 목록 (커밋된 파일 포함) - git ls-files 사용
       let allFiles: string[] = [];
       try {
         const filesOutput = await git.raw(["ls-files"]);
@@ -43,10 +43,11 @@ export class GitOperationService extends BaseRepoService {
         allFiles = [];
       }
 
+      // 호환성을 위해 이전 형식 유지하면서 추가 정보 제공
       return {
-        changes,           // 변경사항 (modified, untracked, added 등)
-        files: allFiles,   // 전체 파일 목록 (커밋된 파일 포함)
-        isEmpty: allFiles.length === 0  // 저장소가 비어있는지
+        files: changes,           // 이전 방식 (변경사항만) - 호환성 유지
+        allFiles,                 // 전체 파일 목록 (새로 추가)
+        isEmpty: allFiles.length === 0  // 저장소 비어있는지 (새로 추가)
       };
     } catch (err) {
       throw new GitOperationException("status", err.message);

@@ -188,12 +188,19 @@ export class BranchService extends BaseRepoService {
 
     try {
       const branchInfo = await git.branch(["-a"]);
-      const branches: Record<string, string> = {};
+      const localBranches: Record<string, string> = {};
+      const remoteBranches: Record<string, string> = {};
+
       for (const [name, obj] of Object.entries(branchInfo.branches) as [
         string,
         BranchSummaryBranch,
       ][]) {
-        if (!name.startsWith("remotes/")) branches[name] = obj.commit;
+        if (name.startsWith("remotes/origin/")) {
+          const branchName = name.replace("remotes/origin/", "");
+          remoteBranches[branchName] = obj.commit;
+        } else if (!name.startsWith("remotes/")) {
+          localBranches[name] = obj.commit;
+        }
       }
 
       const pretty = "%H|%P|%an|%ai|%s";
@@ -206,7 +213,7 @@ export class BranchService extends BaseRepoService {
       if (since) args.push(`^${since}`);
 
       const raw = await git.raw(["log", ...args]);
-      const commits = raw
+      const allCommits = raw
         .trim()
         .split("\n")
         .filter(Boolean)
@@ -221,7 +228,45 @@ export class BranchService extends BaseRepoService {
           };
         });
 
-      return { branches, commits };
+      // 각 브랜치별로 커밋 배열을 구성
+      const buildBranchCommits = (branchHeads: Record<string, string>) => {
+        const result: Record<string, any[]> = {};
+        for (const [branchName, headHash] of Object.entries(branchHeads)) {
+          const commits: any[] = [];
+          let currentHash: string | null = headHash;
+          const visited = new Set<string>();
+
+          while (currentHash && !visited.has(currentHash)) {
+            visited.add(currentHash);
+            const commit = allCommits.find(c => c.hash.startsWith(currentHash as string));
+            if (!commit) break;
+
+            commits.push({
+              hash: commit.hash,
+              message: commit.message,
+              author: commit.author,
+              committedAt: commit.committedAt,
+              parents: commit.parents,
+              files: [] // 파일 정보는 필요시 추가
+            });
+
+            currentHash = commit.parents[0] || null;
+          }
+
+          result[branchName] = commits.reverse(); // 오래된 커밋부터
+        }
+        return result;
+      };
+
+      const local = {
+        branches: buildBranchCommits(localBranches)
+      };
+
+      const remote = {
+        branches: buildBranchCommits(remoteBranches)
+      };
+
+      return { local, remote };
     } catch (err) {
       throw new InternalServerErrorException(
         `Failed to get commit graph: ${err.message}`,

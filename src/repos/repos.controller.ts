@@ -264,22 +264,22 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
 **반환 데이터:**
 \`\`\`json
 {
-  "changes": [        // 변경사항 목록 (git status 결과)
+  "files": [          // 변경사항 목록 (git status 결과) - 이전 버전 호환
     { "name": "file.txt", "status": "modified" },
     { "name": "new.txt", "status": "untracked" }
   ],
-  "files": [          // 전체 파일 목록 (커밋된 파일 포함)
+  "allFiles": [       // 전체 파일 목록 (커밋된 파일 포함) - 새로 추가
     "file.txt",
     "folder/file2.txt"
   ],
-  "isEmpty": false    // 저장소가 비어있는지 (파일이 하나도 없으면 true)
+  "isEmpty": false    // 저장소가 비어있는지 - 새로 추가
 }
 \`\`\`
 
 **활용:**
 - \`isEmpty\`: 초기 업로드 화면 표시 여부 결정
-- \`files\`: 저장소 전체 파일 목록
-- \`changes\`: 변경된 파일만 표시 (git add 대상)
+- \`allFiles\`: 저장소 전체 파일 목록 (커밋된 파일 포함)
+- \`files\`: 변경된 파일만 표시 (git add 대상)
 `
   })
   @ApiResponse({ status: 200, description: "저장소 상태 반환" })
@@ -345,8 +345,127 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.branchService.getBranches(repoId, user.id, commitLimit);
   }
 
-  @ApiOperation({ summary: "커밋 그래프 조회" })
-  @ApiResponse({ status: 200, description: "커밋 그래프 반환" })
+  @ApiOperation({
+    summary: "커밋 그래프 조회",
+    description: `
+로컬과 원격 레포지토리의 커밋 그래프를 조회합니다.
+각 브랜치별로 커밋 히스토리를 배열 형태로 반환하며, 오래된 커밋부터 최신 커밋 순서로 정렬됩니다.
+
+**쿼리 파라미터:**
+- \`since\`: 특정 커밋 이후의 커밋만 조회 (optional)
+- \`max\`: 최대 커밋 개수 (기본값: 200)
+
+**응답 구조:**
+\`\`\`json
+{
+  "local": {
+    "branches": {
+      "main": [
+        {
+          "hash": "커밋 해시",
+          "message": "커밋 메시지",
+          "author": "작성자",
+          "committedAt": "커밋 시간",
+          "parents": ["부모 커밋 해시"],
+          "files": []
+        }
+      ]
+    }
+  },
+  "remote": {
+    "branches": {
+      "main": [...]
+    }
+  }
+}
+\`\`\`
+    `
+  })
+  @ApiResponse({
+    status: 200,
+    description: "커밋 그래프가 성공적으로 반환됨",
+    schema: {
+      type: 'object',
+      properties: {
+        local: {
+          type: 'object',
+          properties: {
+            branches: {
+              type: 'object',
+              additionalProperties: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    hash: { type: 'string', example: '3bad3d6d1840f8a0d628d3365c577871c8647ded', description: '커밋 해시' },
+                    message: { type: 'string', example: 'Initial commit', description: '커밋 메시지' },
+                    author: { type: 'string', example: 'John Doe', description: '커밋 작성자' },
+                    committedAt: { type: 'string', example: '2025-10-11 23:33:05 +0900', description: '커밋 시간' },
+                    parents: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: ['6b0d8081f8ef8e185a24cd2fe5e3eb06a266f192'],
+                      description: '부모 커밋 해시 배열'
+                    },
+                    files: {
+                      type: 'array',
+                      items: { type: 'string' },
+                      example: [],
+                      description: '변경된 파일 목록'
+                    }
+                  }
+                }
+              },
+              example: {
+                main: [
+                  {
+                    hash: '6b0d8081f8ef8e185a24cd2fe5e3eb06a266f192',
+                    message: 'Initial commit',
+                    author: 'pingmong',
+                    committedAt: '2025-10-11 23:19:30 +0900',
+                    parents: [],
+                    files: []
+                  },
+                  {
+                    hash: '3bad3d6d1840f8a0d628d3365c577871c8647ded',
+                    message: 'Add feature',
+                    author: 'pingmong',
+                    committedAt: '2025-10-11 23:33:05 +0900',
+                    parents: ['6b0d8081f8ef8e185a24cd2fe5e3eb06a266f192'],
+                    files: []
+                  }
+                ]
+              }
+            }
+          },
+          description: '로컬 레포지토리의 브랜치별 커밋 히스토리'
+        },
+        remote: {
+          type: 'object',
+          properties: {
+            branches: {
+              type: 'object',
+              additionalProperties: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    hash: { type: 'string', description: '커밋 해시' },
+                    message: { type: 'string', description: '커밋 메시지' },
+                    author: { type: 'string', description: '커밋 작성자' },
+                    committedAt: { type: 'string', description: '커밋 시간' },
+                    parents: { type: 'array', items: { type: 'string' }, description: '부모 커밋 해시 배열' },
+                    files: { type: 'array', items: { type: 'string' }, description: '변경된 파일 목록' }
+                  }
+                }
+              }
+            }
+          },
+          description: '원격 레포지토리의 브랜치별 커밋 히스토리'
+        }
+      }
+    }
+  })
   @Get(":repoId/graph")
   @HttpCode(HttpStatus.OK)
   async graph(
