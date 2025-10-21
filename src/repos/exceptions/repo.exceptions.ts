@@ -170,3 +170,89 @@ export class ApprovalRequiredException extends ForbiddenException {
     super("This Pull Request requires approval before merging");
   }
 }
+
+/**
+ * Git Pull 시 로컬 변경사항과 충돌할 때 발생
+ */
+export class GitPullConflictException extends ConflictException {
+  constructor(public readonly conflictDetails: {
+    message: string;
+    localChanges?: string[];
+    conflictFiles?: string[];
+  }) {
+    super({
+      statusCode: 409,
+      error: 'Pull Conflict',
+      ...conflictDetails,
+      resolution: '로컬 변경사항을 커밋하거나 stash한 후 다시 시도해주세요'
+    });
+  }
+}
+
+/**
+ * Git Push가 거부될 때 발생
+ */
+export class GitPushRejectedException extends ConflictException {
+  constructor(public readonly details: {
+    reason: string;
+    hint?: string;
+  }) {
+    const resolution = details.reason.includes('non-fast-forward')
+      ? '원격 저장소의 변경사항을 먼저 pull한 후 push해주세요'
+      : '원격 저장소 상태를 확인해주세요';
+
+    super({
+      statusCode: 409,
+      error: 'Push Rejected',
+      message: 'Push가 거부되었습니다',
+      reason: details.reason,
+      hint: details.hint,
+      resolution
+    });
+  }
+}
+
+/**
+ * Git Rebase 충돌이 발생할 때
+ */
+export class GitRebaseConflictException extends ConflictException {
+  constructor(public readonly conflictFiles: string[]) {
+    super({
+      statusCode: 409,
+      error: 'Rebase Conflict',
+      message: 'Rebase 중 충돌이 발생했습니다',
+      conflictFiles,
+      resolution: '충돌을 해결하고 git rebase --continue를 실행해주세요'
+    });
+  }
+}
+
+/**
+ * 커밋되지 않은 변경사항이 있을 때 발생
+ */
+export class GitUncommittedChangesException extends BadRequestException {
+  constructor(public readonly changes: string[]) {
+    super({
+      statusCode: 400,
+      error: 'Uncommitted Changes',
+      message: '커밋되지 않은 변경사항이 있습니다',
+      changes,
+      resolution: '변경사항을 커밋하거나 stash한 후 다시 시도해주세요'
+    });
+  }
+}
+
+/**
+ * Git Stash 충돌이 발생할 때
+ */
+export class GitStashConflictException extends ConflictException {
+  constructor(public readonly conflictFiles: string[]) {
+    super({
+      statusCode: 409,
+      error: 'Stash Conflict',
+      message: 'Stash 적용 중 충돌이 발생했습니다',
+      conflictFiles,
+      resolution: '충돌을 수동으로 해결한 후 다시 시도해주세요'
+    });
+  }
+}

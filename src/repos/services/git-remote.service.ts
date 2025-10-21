@@ -12,6 +12,9 @@ import {
   FastForwardNotPossibleException,
   MergeConflictException,
   GitOperationException,
+  GitPullConflictException,
+  GitPushRejectedException,
+  GitUncommittedChangesException,
 } from "@src/repos/exceptions/repo.exceptions";
 
 @Injectable()
@@ -37,6 +40,22 @@ export class GitRemoteService extends BaseRepoService {
     ffOnly = false,
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
+
+    // 로컬 변경사항 확인
+    const status = await git.status();
+    const hasUncommittedChanges =
+      status.modified.length > 0 ||
+      status.created.length > 0 ||
+      status.deleted.length > 0;
+
+    if (hasUncommittedChanges) {
+      const changes = [
+        ...status.modified,
+        ...status.created,
+        ...status.deleted,
+      ];
+      throw new GitUncommittedChangesException(changes);
+    }
 
     // 브랜치 이름 가져오기 (에러 처리 추가)
     let targetBranch: string;
@@ -104,10 +123,39 @@ export class GitRemoteService extends BaseRepoService {
 
     try {
       await git.pull(remote, targetBranch, ffOnly ? { "--ff-only": null } : {});
-    } catch (err) {
-      if (/merge conflict/i.test(err.message)) {
-        throw new MergeConflictException();
+
+      // Pull 후 충돌 확인
+      const postStatus = await git.status();
+      if (postStatus.conflicted.length > 0) {
+        throw new GitPullConflictException({
+          message: "Pull 중 충돌이 발생했습니다",
+          conflictFiles: postStatus.conflicted,
+        });
       }
+    } catch (err) {
+      // 이미 던진 예외는 그대로 전달
+      if (err instanceof GitPullConflictException) {
+        throw err;
+      }
+
+      // 충돌 에러 처리
+      if (/merge conflict|CONFLICT/i.test(err.message)) {
+        const postStatus = await git.status();
+        throw new GitPullConflictException({
+          message: "Pull 중 병합 충돌이 발생했습니다",
+          conflictFiles: postStatus.conflicted,
+        });
+      }
+
+      // 로컬 변경사항과 충돌
+      if (/would be overwritten|needs merge/i.test(err.message)) {
+        const postStatus = await git.status();
+        throw new GitPullConflictException({
+          message: "로컬 변경사항과 충돌이 발생했습니다",
+          localChanges: [...postStatus.modified, ...postStatus.created],
+        });
+      }
+
       throw new GitOperationException("pull", err.message);
     }
 
@@ -197,8 +245,10 @@ export class GitRemoteService extends BaseRepoService {
         pushed: res.pushed,
       };
     } catch (err) {
+      const errorMessage = err.message || err.toString();
+
       // upstream이 설정되지 않은 경우 자동으로 설정하고 재시도
-      if (/no upstream branch|set-upstream/i.test(err.message)) {
+      if (/no upstream branch|set-upstream/i.test(errorMessage)) {
         try {
           const res = await git.push(remote, targetBranch, ["--set-upstream"]);
           return {
@@ -207,13 +257,46 @@ export class GitRemoteService extends BaseRepoService {
             pushed: res.pushed,
           };
         } catch (retryErr) {
+          const retryErrorMessage = retryErr.message || retryErr.toString();
+
+          // Push 거부 처리
+          if (/rejected|non-fast-forward/i.test(retryErrorMessage)) {
+            throw new GitPushRejectedException({
+              reason: retryErrorMessage.includes("non-fast-forward")
+                ? "non-fast-forward"
+                : "rejected",
+              hint: "원격 저장소에 로컬에 없는 변경사항이 있습니다",
+            });
+          }
+
           throw new GitOperationException(
             "push",
-            `Push 실패: ${retryErr.message}`,
+            `Push 실패: ${retryErrorMessage}`,
           );
         }
       }
-      throw new GitOperationException("push", err.message);
+
+      // Push 거부 처리
+      if (/rejected|non-fast-forward/i.test(errorMessage)) {
+        throw new GitPushRejectedException({
+          reason: errorMessage.includes("non-fast-forward")
+            ? "non-fast-forward"
+            : "rejected",
+          hint: errorMessage.includes("non-fast-forward")
+            ? "원격 저장소를 먼저 pull한 후 다시 시도하세요"
+            : "원격 저장소 권한을 확인하세요",
+        });
+      }
+
+      // 인증 실패
+      if (/authentication|permission|unauthorized/i.test(errorMessage)) {
+        throw new GitOperationException(
+          "push",
+          `인증 실패: ${errorMessage}`,
+        );
+      }
+
+      throw new GitOperationException("push", errorMessage);
     }
   }
 

@@ -44,6 +44,22 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
+
+  // "Repos" 태그 제거 (Controller 경로에서 자동 생성된 태그)
+  if (document.tags) {
+    document.tags = document.tags.filter(tag => tag.name !== 'Repos');
+  }
+
+  // 모든 엔드포인트에서 "Repos" 태그 제거
+  Object.keys(document.paths).forEach(path => {
+    Object.keys(document.paths[path]).forEach(method => {
+      const operation = document.paths[path][method];
+      if (operation.tags) {
+        operation.tags = operation.tags.filter(tag => tag !== 'Repos');
+      }
+    });
+  });
+
   SwaggerModule.setup("api", app, document);
 
   await app.listen(port);

@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   HttpCode,
+  HttpException,
   HttpStatus,
   Param,
   Patch,
@@ -29,6 +30,9 @@ import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { BranchService } from "@src/repos/services/branch.service";
 import { PullRequestService } from "@src/repos/services/pull-request.service";
 import { FileService } from "@src/repos/services/file.service";
+import { GitConflictService } from "@src/repos/services/git-conflict.service";
+import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
+import { GitDiffService } from "@src/repos/services/git-diff.service";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
@@ -53,7 +57,6 @@ import { CreateBranchDto } from "@src/repos/dto/create-branch.dto";
 import { SwitchBranchDto } from "@src/repos/dto/switch-branch.dto";
 import { MergeBranchDto } from "@src/repos/dto/merge-branch.dto";
 
-@ApiTags("repositories")
 @ApiBearerAuth("JWT-auth")
 @Controller("repos")
 @UseGuards(AuthGuard("jwt"))
@@ -65,8 +68,12 @@ export class ReposController {
     private readonly branchService: BranchService,
     private readonly pullRequestService: PullRequestService,
     private readonly fileService: FileService,
+    private readonly gitConflictService: GitConflictService,
+    private readonly aiConflictResolver: AIConflictResolverService,
+    private readonly gitDiffService: GitDiffService,
   ) {}
 
+  @ApiTags("Repositories")
   @ApiOperation({ summary: "새 레포지토리 생성" })
   @ApiResponse({
     status: 201,
@@ -82,6 +89,7 @@ export class ReposController {
     return this.reposService.createRepo(createRepoDto, user.id);
   }
 
+  @ApiTags("Repositories")
   @ApiOperation({
     summary: "레포지토리 삭제",
     description: "레포지토리와 관련된 모든 데이터를 삭제합니다. 로컬 git 디렉토리, 리모트 디렉토리, DB 엔티티가 모두 삭제됩니다."
@@ -114,6 +122,7 @@ export class ReposController {
     return { success: true };
   }
 
+  @ApiTags("Repositories")
   @ApiOperation({ summary: "내 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
@@ -126,6 +135,7 @@ export class ReposController {
     return this.reposService.findReposByOwner(user.id);
   }
 
+  @ApiTags("Repositories")
   @ApiOperation({ summary: "공개 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
@@ -138,6 +148,7 @@ export class ReposController {
     return this.reposService.findPublicRepos();
   }
 
+  @ApiTags("Repositories")
   @ApiOperation({ summary: "특정 사용자의 공개 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
@@ -152,6 +163,7 @@ export class ReposController {
     return this.reposService.findPublicReposByOwner(userId);
   }
 
+  @ApiTags("Repositories")
   @ApiOperation({ summary: "레포지토리 Fork" })
   @ApiResponse({
     status: 201,
@@ -167,6 +179,7 @@ export class ReposController {
     return this.reposService.forkRepo(forkRepoDto, user.id);
   }
 
+  @ApiTags("Commits")
   @ApiOperation({ summary: "파일 스테이징" })
   @ApiResponse({ status: 200, description: "파일이 성공적으로 스테이징됨" })
   @Post(":repoId/add")
@@ -179,6 +192,7 @@ export class ReposController {
     return this.gitOperationService.addFiles(repoId, user.id, addDto.files);
   }
 
+  @ApiTags("Commits")
   @ApiOperation({ summary: "변경사항 커밋" })
   @ApiResponse({ status: 200, description: "커밋이 성공적으로 생성됨" })
   @Post(":repoId/commit")
@@ -196,6 +210,7 @@ export class ReposController {
     );
   }
 
+  @ApiTags("Remotes")
   @ApiOperation({ summary: "리모트 저장소 등록" })
   @ApiResponse({ status: 204, description: "리모트가 성공적으로 등록됨" })
   @Post(":repoId/remote")
@@ -213,6 +228,7 @@ export class ReposController {
     );
   }
 
+  @ApiTags("Pull")
   @ApiOperation({
     summary: "원격 저장소에서 Pull",
     description: `원격 저장소의 변경사항을 로컬로 가져옵니다.
@@ -257,6 +273,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
     );
   }
 
+  @ApiTags("Status")
   @ApiOperation({
     summary: "저장소 상태 조회",
     description: `저장소의 현재 상태와 파일 목록을 반환합니다.
@@ -288,6 +305,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
     return this.gitOperationService.status(repoId, user.id);
   }
 
+  @ApiTags("Push")
   @ApiOperation({
     summary: "원격 저장소로 Push",
     description: `로컬 변경사항을 원격 저장소로 업로드합니다.
@@ -332,6 +350,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Branches")
   @ApiOperation({ summary: "브랜치 목록 조회" })
   @ApiResponse({ status: 200, description: "브랜치 목록 및 최근 커밋 반환" })
   @Get(":repoId/branches")
@@ -345,6 +364,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.branchService.getBranches(repoId, user.id, commitLimit);
   }
 
+  @ApiTags("Status")
   @ApiOperation({
     summary: "커밋 그래프 조회",
     description: `
@@ -482,6 +502,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Remotes")
   @ApiOperation({ summary: "로컬 리모트 저장소 생성" })
   @ApiResponse({ status: 201, description: "로컬 리모트가 성공적으로 생성됨" })
   @Post(":repoId/remote-local")
@@ -503,6 +524,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     };
   }
 
+  @ApiTags("Branches")
   @ApiOperation({ summary: "새 브랜치 생성" })
   @ApiResponse({ status: 201, description: "브랜치가 성공적으로 생성됨" })
   @Post(":repoId/branches")
@@ -520,6 +542,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Branches")
   @ApiOperation({ summary: "브랜치 전환" })
   @ApiResponse({ status: 200, description: "브랜치가 성공적으로 전환됨" })
   @Post(":repoId/branches/switch")
@@ -532,6 +555,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.branchService.switchBranch(repoId, user.id, switchBranchDto.name);
   }
 
+  @ApiTags("Branches")
   @ApiOperation({ summary: "브랜치 삭제" })
   @ApiResponse({ status: 200, description: "브랜치가 성공적으로 삭제됨" })
   @Delete(":repoId/branches/:branchName")
@@ -544,6 +568,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.branchService.deleteBranch(repoId, user.id, branchName);
   }
 
+  @ApiTags("Branches")
   @ApiOperation({ summary: "브랜치 병합" })
   @ApiResponse({ status: 200, description: "브랜치가 성공적으로 병합됨" })
   @Post(":repoId/merge")
@@ -562,6 +587,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 생성" })
   @ApiResponse({ status: 201, description: "Pull Request가 성공적으로 생성됨" })
   @Post(":repoId/pull-requests")
@@ -578,6 +604,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 목록 조회" })
   @ApiResponse({ status: 200, description: "Pull Request 목록 반환" })
   @Get(":repoId/pull-requests")
@@ -590,6 +617,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.pullRequestService.getPullRequests(repoId, user.id, status);
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 상세 조회" })
   @ApiResponse({ status: 200, description: "Pull Request 상세 정보 반환" })
   @Get(":repoId/pull-requests/:prId")
@@ -602,6 +630,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.pullRequestService.getPullRequest(repoId, user.id, prId);
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 병합" })
   @ApiResponse({ status: 200, description: "Pull Request가 성공적으로 병합됨" })
   @Post(":repoId/pull-requests/:prId/merge")
@@ -620,6 +649,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 닫기" })
   @ApiResponse({ status: 200, description: "Pull Request가 성공적으로 닫힘" })
   @Post(":repoId/pull-requests/:prId/close")
@@ -632,6 +662,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.pullRequestService.closePullRequest(repoId, user.id, prId);
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 리뷰 작성" })
   @ApiResponse({ status: 201, description: "리뷰가 성공적으로 작성됨" })
   @Post(":repoId/pull-requests/:prId/reviews")
@@ -650,6 +681,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     );
   }
 
+  @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 리뷰 목록 조회" })
   @ApiResponse({ status: 200, description: "리뷰 목록 반환" })
   @Get(":repoId/pull-requests/:prId/reviews")
@@ -663,6 +695,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
   }
 
   // 파일 관리 API들
+  @ApiTags("Files")
   @ApiOperation({ summary: "파일 브라우징 및 파일 내용 조회" })
   @ApiResponse({
     status: 200,
@@ -678,6 +711,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
     return this.fileService.browseFiles(repoId, user.id, filePath);
   }
 
+  @ApiTags("Files")
   @ApiOperation({
     summary: "파일 생성 또는 업로드",
     description: `Content-Type에 따라 다르게 동작합니다.
@@ -814,7 +848,9 @@ fetch('/repos/:repoId/files', {
   ) {
     if (files && files.length > 0) {
       const uploadPath = body?.path || "";
-      const overwrite = Boolean(body?.overwrite) || String(body?.overwrite) === 'true';
+      const overwrite = body?.overwrite !== undefined
+        ? (Boolean(body?.overwrite) || String(body?.overwrite) === 'true')
+        : true; // 기본값을 true로 변경
 
       return this.fileService.uploadFiles(
         repoId,
@@ -837,6 +873,7 @@ fetch('/repos/:repoId/files', {
     );
   }
 
+  @ApiTags("Files")
   @ApiOperation({ summary: "파일 내용 수정" })
   @ApiResponse({ status: 200, description: "파일이 성공적으로 수정됨" })
   @Patch(":repoId/files")
@@ -854,6 +891,7 @@ fetch('/repos/:repoId/files', {
     );
   }
 
+  @ApiTags("Files")
   @ApiOperation({ summary: "파일 또는 폴더 삭제" })
   @ApiResponse({ status: 200, description: "파일/폴더가 성공적으로 삭제됨" })
   @Delete(":repoId/files")
@@ -864,6 +902,451 @@ fetch('/repos/:repoId/files', {
     @Query("path") filePath: string,
   ) {
     return this.fileService.deleteFile(repoId, user.id, filePath);
+  }
+
+  // Git 충돌 관련 API들
+  @ApiTags("Conflicts")
+  @ApiOperation({
+    summary: "충돌 파일 목록 조회",
+    description: "현재 레포지토리의 충돌 상태와 충돌 파일 목록을 반환합니다."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "충돌 정보 반환",
+    schema: {
+      type: 'object',
+      properties: {
+        hasConflict: { type: 'boolean', example: true },
+        conflictFiles: {
+          type: 'array',
+          items: { type: 'string' },
+          example: ['README.md', 'src/index.ts']
+        },
+        message: { type: 'string', example: '2개 파일에서 충돌이 발생했습니다' }
+      }
+    }
+  })
+  @Get(":repoId/conflicts")
+  @HttpCode(HttpStatus.OK)
+  async getConflicts(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.gitConflictService.checkForConflicts(repoId, user.id);
+  }
+
+  @ApiTags("Conflicts")
+  @ApiOperation({
+    summary: "충돌 해결",
+    description: `충돌이 발생한 파일을 해결합니다.
+
+**해결 방법:**
+- \`ours\`: 현재 브랜치의 버전을 선택
+- \`theirs\`: 병합 대상 브랜치의 버전을 선택
+- \`manual\`: 수동으로 수정한 내용을 적용
+
+**요청 예시:**
+\`\`\`json
+{
+  "filePath": "README.md",
+  "resolution": "ours"
+}
+\`\`\`
+
+**수동 해결 예시:**
+\`\`\`json
+{
+  "filePath": "README.md",
+  "resolution": "manual",
+  "manualContent": "# 수정된 내용\\n..."
+}
+\`\`\``
+  })
+  @ApiResponse({
+    status: 200,
+    description: "충돌이 성공적으로 해결됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: '파일 충돌이 해결되었습니다' }
+      }
+    }
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        filePath: { type: 'string', example: 'README.md', description: '충돌 파일 경로' },
+        resolution: {
+          type: 'string',
+          enum: ['ours', 'theirs', 'manual'],
+          description: '해결 방법'
+        },
+        manualContent: {
+          type: 'string',
+          description: 'resolution이 manual일 때 필요한 파일 내용'
+        }
+      },
+      required: ['filePath', 'resolution']
+    }
+  })
+  @Post(":repoId/conflicts/resolve")
+  @HttpCode(HttpStatus.OK)
+  async resolveConflict(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Body() body: {
+      filePath: string;
+      resolution: "ours" | "theirs" | "manual";
+      manualContent?: string;
+    },
+  ) {
+    return this.gitConflictService.resolveConflict(
+      repoId,
+      user.id,
+      body.filePath,
+      body.resolution,
+      body.manualContent,
+    );
+  }
+
+  @ApiTags("Conflicts")
+  @ApiOperation({
+    summary: "병합 중단",
+    description: "진행 중인 병합을 취소하고 이전 상태로 되돌립니다."
+  })
+  @ApiResponse({
+    status: 200,
+    description: "병합이 성공적으로 취소됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: '병합이 취소되었습니다' }
+      }
+    }
+  })
+  @Post(":repoId/merge/abort")
+  @HttpCode(HttpStatus.OK)
+  async abortMerge(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+  ) {
+    return this.gitConflictService.abortMerge(repoId, user.id);
+  }
+
+  @ApiTags("Conflicts")
+  @ApiOperation({
+    summary: "AI 충돌 해결 제안",
+    description: `Claude AI가 충돌 파일을 분석하고 최적의 병합 제안을 제공합니다.
+
+**사용 방법:**
+1. 충돌이 발생한 파일의 경로를 전달
+2. AI가 양쪽 버전을 분석하고 병합 코드 생성
+3. 제안된 코드와 설명을 검토
+4. 마음에 들면 \`/conflicts/resolve\` API로 적용
+
+**요청 예시:**
+\`\`\`json
+{
+  "filePath": "src/index.ts"
+}
+\`\`\`
+
+**응답 예시:**
+\`\`\`json
+{
+  "success": true,
+  "suggestion": "병합된 코드 (충돌 마커 제거됨)",
+  "explanation": "두 버전의 기능을 모두 유지하면서...",
+  "confidence": 0.92
+}
+\`\`\`
+
+**참고:** CLAUDE_API_KEY 환경변수가 설정되어 있어야 합니다.`
+  })
+  @ApiResponse({
+    status: 200,
+    description: "AI 제안이 성공적으로 생성됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        suggestion: {
+          type: 'string',
+          description: '충돌이 해결된 코드 (마커 제거됨)',
+          example: 'function hello() {\n  console.log("Hello");\n  return "greeting";\n}'
+        },
+        explanation: {
+          type: 'string',
+          description: 'AI가 선택한 이유 설명',
+          example: '두 브랜치의 console.log와 return문을 모두 유지했습니다...'
+        },
+        confidence: {
+          type: 'number',
+          description: '신뢰도 (0-1)',
+          example: 0.92
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 400,
+    description: "충돌 마커가 없거나 파일을 찾을 수 없음"
+  })
+  @ApiResponse({
+    status: 500,
+    description: "AI 서비스 오류"
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        filePath: {
+          type: 'string',
+          example: 'README.md',
+          description: '충돌이 발생한 파일 경로'
+        }
+      },
+      required: ['filePath']
+    }
+  })
+  @Post(":repoId/conflicts/ai-suggest")
+  @HttpCode(HttpStatus.OK)
+  async aiSuggestConflictResolution(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Body() body: { filePath: string }
+  ) {
+    // 1. 충돌 파일 내용 읽기
+    const fileContent = await this.fileService.browseFiles(
+      repoId,
+      user.id,
+      body.filePath
+    );
+
+    // browseFiles의 반환 타입에 따라 처리
+    const conflictContent = typeof fileContent === 'string'
+      ? fileContent
+      : (fileContent as any).content || JSON.stringify(fileContent);
+
+    // 2. 충돌 마커 확인
+    if (!conflictContent.includes('<<<<<<< HEAD')) {
+      throw new HttpException(
+        '이 파일에는 충돌 마커가 없습니다',
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    // 3. AI에게 해결 제안 요청
+    const result = await this.aiConflictResolver.suggestResolution(
+      conflictContent,
+      body.filePath
+    );
+
+    return {
+      success: true,
+      suggestion: result.resolvedCode,
+      explanation: result.explanation,
+      confidence: result.confidence
+    };
+  }
+
+  // Diff 관련 API들
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "작업 디렉토리 변경사항 diff",
+    description: "Unstaged 변경사항의 diff를 조회합니다 (git diff)"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Diff 정보 반환"
+  })
+  @Get(":repoId/diff/working")
+  @HttpCode(HttpStatus.OK)
+  async getWorkingDiff(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    return this.gitDiffService.getWorkingDiff(repoId, user.id, filePath);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "Staged 변경사항 diff",
+    description: "Staged 변경사항의 diff를 조회합니다 (git diff --cached)"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Diff 정보 반환"
+  })
+  @Get(":repoId/diff/staged")
+  @HttpCode(HttpStatus.OK)
+  async getStagedDiff(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    return this.gitDiffService.getStagedDiff(repoId, user.id, filePath);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "두 커밋 간 diff",
+    description: `두 커밋 간의 차이를 조회합니다
+
+**예시:**
+\`\`\`
+GET /repos/:repoId/diff/commits/:commitA/:commitB
+GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
+\`\`\``
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Diff 정보 반환"
+  })
+  @Get(":repoId/diff/commits/:commitA/:commitB")
+  @HttpCode(HttpStatus.OK)
+  async getCommitDiff(
+    @Param("repoId") repoId: string,
+    @Param("commitA") commitA: string,
+    @Param("commitB") commitB: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    return this.gitDiffService.getCommitDiff(repoId, user.id, commitA, commitB, filePath);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "브랜치 간 diff",
+    description: "두 브랜치 간의 차이를 조회합니다"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Diff 정보 반환"
+  })
+  @Get(":repoId/diff/branches")
+  @HttpCode(HttpStatus.OK)
+  async getBranchDiff(
+    @Param("repoId") repoId: string,
+    @Query("source") sourceBranch: string,
+    @Query("target") targetBranch: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    return this.gitDiffService.getBranchDiff(repoId, user.id, sourceBranch, targetBranch, filePath);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "특정 커밋의 변경사항",
+    description: "특정 커밋에서 변경된 내용을 조회합니다 (부모 커밋과 비교)"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Diff 정보 반환"
+  })
+  @Get(":repoId/diff/commit/:hash")
+  @HttpCode(HttpStatus.OK)
+  async getCommitChanges(
+    @Param("repoId") repoId: string,
+    @Param("hash") commitHash: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    return this.gitDiffService.getCommitChanges(repoId, user.id, commitHash, filePath);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "변경된 파일 목록",
+    description: "변경된 파일 목록만 조회 (diff 내용 없이)"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "변경된 파일 목록"
+  })
+  @Get(":repoId/diff/files")
+  @HttpCode(HttpStatus.OK)
+  async getChangedFiles(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("commitA") commitA?: string,
+    @Query("commitB") commitB?: string,
+  ) {
+    return this.gitDiffService.getChangedFiles(repoId, user.id, commitA, commitB);
+  }
+
+  @ApiTags("Diffs")
+  @ApiOperation({
+    summary: "Diff 통계",
+    description: "변경사항 통계 정보 (추가/삭제 라인 수)"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "통계 정보",
+    schema: {
+      type: 'object',
+      properties: {
+        files: { type: 'number', example: 3 },
+        additions: { type: 'number', example: 125 },
+        deletions: { type: 'number', example: 42 },
+        fileStats: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              path: { type: 'string' },
+              additions: { type: 'number' },
+              deletions: { type: 'number' }
+            }
+          }
+        }
+      }
+    }
+  })
+  @Get(":repoId/diff/stats")
+  @HttpCode(HttpStatus.OK)
+  async getDiffStats(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("commitA") commitA?: string,
+    @Query("commitB") commitB?: string,
+  ) {
+    return this.gitDiffService.getDiffStats(repoId, user.id, commitA, commitB);
+  }
+
+  @ApiTags("Pull Requests")
+  @ApiOperation({
+    summary: "Pull Request의 변경사항 diff",
+    description: "PR의 source와 target 브랜치 간 diff를 조회합니다"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "PR diff 정보"
+  })
+  @Get(":repoId/pull-requests/:prId/diff")
+  @HttpCode(HttpStatus.OK)
+  async getPullRequestDiff(
+    @Param("repoId") repoId: string,
+    @Param("prId") prId: string,
+    @AuthUser() user: User,
+    @Query("path") filePath?: string,
+  ) {
+    // PR 정보 조회
+    const pr = await this.pullRequestService.getPullRequest(repoId, user.id, prId);
+
+    // source와 target 브랜치 간 diff
+    return this.gitDiffService.getBranchDiff(
+      repoId,
+      user.id,
+      pr.sourceBranch,
+      pr.targetBranch,
+      filePath
+    );
   }
 
 }

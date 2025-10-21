@@ -5,7 +5,7 @@ import { UsersService } from "@src/users/users.service";
 import { AuthGuard } from "@nestjs/passport";
 import { User } from "@src/users/entities/user.entity";
 
-@ApiTags("users")
+@ApiTags("Users")
 @ApiBearerAuth("JWT-auth")
 @Controller("users")
 export class UsersController {
