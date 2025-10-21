@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
@@ -7,6 +7,7 @@ import * as path from "node:path";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { GitOperationException } from "@src/repos/exceptions/repo.exceptions";
+import { ResetMode } from "@src/repos/dto/reset.dto";
 
 @Injectable()
 export class GitOperationService extends BaseRepoService {
@@ -154,6 +155,79 @@ export class GitOperationService extends BaseRepoService {
         "commit",
         `커밋 정보를 가져올 수 없습니다: ${err.message}`,
       );
+    }
+  }
+
+  /**
+   * 특정 커밋으로 되돌리기 (Git Reset)
+   *
+   * @param repoId 레포지토리 ID
+   * @param userId 사용자 ID
+   * @param commitHash 되돌릴 커밋 해시
+   * @param mode Reset 모드 (hard/soft/mixed)
+   * @returns Reset 결과
+   */
+  async resetToCommit(
+    repoId: string,
+    userId: string,
+    commitHash: string,
+    mode: ResetMode = ResetMode.MIXED,
+  ) {
+    const { git } = await this.getRepoAndGit(repoId, userId);
+
+    try {
+      // 커밋 해시가 유효한지 확인
+      try {
+        await git.revparse([commitHash]);
+      } catch {
+        throw new NotFoundException(`커밋 '${commitHash}'를 찾을 수 없습니다.`);
+      }
+
+      // Reset 전 현재 상태 저장
+      const beforeHash = (await git.revparse(["HEAD"])).trim();
+      const beforeBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+
+      // Reset 실행
+      const resetOption = `--${mode}`;
+      await git.reset([resetOption, commitHash]);
+
+      // Reset 후 상태
+      const afterHash = (await git.revparse(["HEAD"])).trim();
+      const status = await git.status();
+
+      return {
+        success: true,
+        mode,
+        from: beforeHash,
+        to: afterHash,
+        branch: beforeBranch,
+        // 상태 정보
+        modified: status.modified || [],
+        staged: status.staged || [],
+        message: this.getResetMessage(mode, beforeHash, afterHash),
+      };
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+      throw new GitOperationException("reset", err.message);
+    }
+  }
+
+  /**
+   * Reset 모드별 메시지 생성
+   */
+  private getResetMessage(mode: ResetMode, from: string, to: string): string {
+    const fromShort = from.slice(0, 7);
+    const toShort = to.slice(0, 7);
+
+    switch (mode) {
+      case ResetMode.HARD:
+        return `Hard reset: ${fromShort} → ${toShort} (작업 디렉토리까지 완전히 되돌림)`;
+      case ResetMode.SOFT:
+        return `Soft reset: ${fromShort} → ${toShort} (변경사항은 staged 상태로 유지)`;
+      case ResetMode.MIXED:
+        return `Mixed reset: ${fromShort} → ${toShort} (변경사항은 unstaged 상태로 유지)`;
     }
   }
 }

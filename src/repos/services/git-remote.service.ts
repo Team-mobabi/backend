@@ -7,6 +7,7 @@ import * as path from "node:path";
 import simpleGit from "simple-git";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
+import { PullResponse } from "@src/repos/dto/responses.dto";
 import {
   RemoteEmptyException,
   FastForwardNotPossibleException,
@@ -38,7 +39,7 @@ export class GitRemoteService extends BaseRepoService {
     remote = "origin",
     branch?: string,
     ffOnly = false,
-  ) {
+  ): Promise<PullResponse> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     // 로컬 변경사항 확인
@@ -123,47 +124,38 @@ export class GitRemoteService extends BaseRepoService {
 
     try {
       await git.pull(remote, targetBranch, ffOnly ? { "--ff-only": null } : {});
-
-      // Pull 후 충돌 확인
-      const postStatus = await git.status();
-      if (postStatus.conflicted.length > 0) {
-        throw new GitPullConflictException({
-          message: "Pull 중 충돌이 발생했습니다",
-          conflictFiles: postStatus.conflicted,
-        });
-      }
     } catch (err) {
-      // 이미 던진 예외는 그대로 전달
-      if (err instanceof GitPullConflictException) {
-        throw err;
-      }
+      // 충돌 에러는 정상 플로우로 처리 (merge와 동일)
+      if (!/merge conflict|CONFLICT/i.test(err.message)) {
+        // 로컬 변경사항과 충돌
+        if (/would be overwritten|needs merge/i.test(err.message)) {
+          const postStatus = await git.status();
+          throw new GitPullConflictException({
+            message: "로컬 변경사항과 충돌이 발생했습니다",
+            localChanges: [...postStatus.modified, ...postStatus.created],
+          });
+        }
 
-      // 충돌 에러 처리
-      if (/merge conflict|CONFLICT/i.test(err.message)) {
-        const postStatus = await git.status();
-        throw new GitPullConflictException({
-          message: "Pull 중 병합 충돌이 발생했습니다",
-          conflictFiles: postStatus.conflicted,
-        });
+        throw new GitOperationException("pull", err.message);
       }
-
-      // 로컬 변경사항과 충돌
-      if (/would be overwritten|needs merge/i.test(err.message)) {
-        const postStatus = await git.status();
-        throw new GitPullConflictException({
-          message: "로컬 변경사항과 충돌이 발생했습니다",
-          localChanges: [...postStatus.modified, ...postStatus.created],
-        });
-      }
-
-      throw new GitOperationException("pull", err.message);
+      // 충돌은 아래에서 체크하여 응답에 포함
     }
+
+    // Pull 후 충돌 확인
+    const postStatus = await git.status();
+    const conflictFiles = postStatus.conflicted || [];
+    const hasConflict = conflictFiles.length > 0;
+
+    // Pull 후 최신 해시 가져오기
+    const finalHash = (await git.revparse(["HEAD"])).trim();
 
     return {
       success: true,
       fastForward: isAncestor,
       from: localHash,
-      to: remoteHash,
+      to: finalHash,
+      hasConflict,
+      conflictFiles,
     };
   }
 

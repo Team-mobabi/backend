@@ -39,9 +39,11 @@ import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
 import { PushDto } from "@src/repos/dto/push.dto";
 import { PullDto } from "@src/repos/dto/pull.dto";
+import { MergeResponse, PullResponse } from "@src/repos/dto/responses.dto";
 import { CreateLocalRemoteDto } from "@src/repos/dto/create-local-remote.dto";
 import { AddDto } from "@src/repos/dto/add.dto";
 import { CommitDto } from "@src/repos/dto/commit.dto";
+import { ResetDto } from "@src/repos/dto/reset.dto";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { MergePullRequestDto } from "@src/repos/dto/merge-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
@@ -210,6 +212,94 @@ export class ReposController {
     );
   }
 
+  @ApiTags("Commits")
+  @ApiOperation({
+    summary: "특정 커밋으로 되돌리기 (Git Reset)",
+    description: `특정 커밋 시점으로 HEAD를 이동시킵니다.
+
+**⚠️ 주의사항:**
+- **히스토리가 변경됩니다**. 이미 push된 커밋을 reset하면 문제가 발생할 수 있습니다.
+- 협업 시에는 revert 사용을 권장합니다.
+
+**Reset 모드:**
+
+1. **Hard** (\`--hard\`)
+   - 작업 디렉토리까지 완전히 되돌림
+   - 커밋 + Staged + Unstaged 변경사항 모두 삭제
+   - ⚠️ 데이터 손실 가능성 있음
+
+2. **Soft** (\`--soft\`)
+   - 커밋만 취소, 변경사항은 Staged 상태로 유지
+   - 커밋 메시지 수정이나 다시 커밋할 때 유용
+
+3. **Mixed** (\`--mixed\`, 기본값)
+   - 커밋 취소, 변경사항은 Unstaged 상태로 유지
+   - 파일은 그대로 유지되지만 git add는 취소됨
+
+**요청 예시:**
+\`\`\`json
+{
+  "commitHash": "abc1234",
+  "mode": "hard"
+}
+\`\`\`
+
+**응답 예시:**
+\`\`\`json
+{
+  "success": true,
+  "mode": "hard",
+  "from": "def5678",
+  "to": "abc1234",
+  "branch": "main",
+  "modified": [],
+  "staged": [],
+  "message": "Hard reset: def5678 → abc1234 (작업 디렉토리까지 완전히 되돌림)"
+}
+\`\`\`
+
+**사용 시나리오:**
+- 최근 커밋을 취소하고 다시 작업하고 싶을 때
+- 잘못된 커밋을 완전히 제거하고 싶을 때 (hard)
+- 커밋은 취소하되 변경사항은 유지하고 싶을 때 (soft/mixed)
+`
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Reset이 성공적으로 완료됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        mode: { type: 'string', enum: ['hard', 'soft', 'mixed'], example: 'hard' },
+        from: { type: 'string', example: 'def5678', description: 'Reset 전 커밋 해시' },
+        to: { type: 'string', example: 'abc1234', description: 'Reset 후 커밋 해시' },
+        branch: { type: 'string', example: 'main', description: '현재 브랜치' },
+        modified: { type: 'array', items: { type: 'string' }, description: 'Modified 파일 목록' },
+        staged: { type: 'array', items: { type: 'string' }, description: 'Staged 파일 목록' },
+        message: { type: 'string', example: 'Hard reset: def5678 → abc1234 (작업 디렉토리까지 완전히 되돌림)' }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 404,
+    description: "커밋을 찾을 수 없음"
+  })
+  @Post(":repoId/reset")
+  @HttpCode(HttpStatus.OK)
+  async reset(
+    @Param("repoId") repoId: string,
+    @Body() resetDto: ResetDto,
+    @AuthUser() user: User,
+  ) {
+    return this.gitOperationService.resetToCommit(
+      repoId,
+      user.id,
+      resetDto.commitHash,
+      resetDto.mode,
+    );
+  }
+
   @ApiTags("Remotes")
   @ApiOperation({ summary: "리모트 저장소 등록" })
   @ApiResponse({ status: 204, description: "리모트가 성공적으로 등록됨" })
@@ -247,6 +337,30 @@ export class ReposController {
 {}
 \`\`\`
 
+**응답 예시 (충돌 없음):**
+\`\`\`json
+{
+  "success": true,
+  "fastForward": true,
+  "from": "abc123",
+  "to": "def456",
+  "hasConflict": false,
+  "conflictFiles": []
+}
+\`\`\`
+
+**응답 예시 (충돌 발생):**
+\`\`\`json
+{
+  "success": true,
+  "fastForward": false,
+  "from": "abc123",
+  "to": "def456",
+  "hasConflict": true,
+  "conflictFiles": ["file1.txt", "file2.js"]
+}
+\`\`\`
+
 **curl 예시:**
 \`\`\`bash
 curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
@@ -256,14 +370,18 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
 \`\`\`
 `
   })
-  @ApiResponse({ status: 200, description: "Pull이 성공적으로 완료됨" })
+  @ApiResponse({
+    status: 200,
+    description: "Pull이 완료됨. 응답에 충돌 정보 포함됨 (hasConflict, conflictFiles)",
+    type: PullResponse,
+  })
   @Post(":repoId/pull")
   @HttpCode(HttpStatus.OK)
   pull(
     @Param("repoId") repoId: string,
     @AuthUser() user: User,
     @Body() pullDto: PullDto,
-  ) {
+  ): Promise<PullResponse> {
     return this.gitRemoteService.pullRepo(
       repoId,
       user.id,
@@ -569,15 +687,54 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
   }
 
   @ApiTags("Branches")
-  @ApiOperation({ summary: "브랜치 병합" })
-  @ApiResponse({ status: 200, description: "브랜치가 성공적으로 병합됨" })
+  @ApiOperation({
+    summary: "브랜치 병합",
+    description: `소스 브랜치를 타겟 브랜치로 병합합니다.
+
+**응답 예시 (충돌 없음):**
+\`\`\`json
+{
+  "success": true,
+  "fastForward": false,
+  "from": "abc123",
+  "to": "def456",
+  "sourceBranch": "feature",
+  "targetBranch": "main",
+  "hasConflict": false,
+  "conflictFiles": []
+}
+\`\`\`
+
+**응답 예시 (충돌 발생):**
+\`\`\`json
+{
+  "success": true,
+  "fastForward": false,
+  "from": "abc123",
+  "to": "def456",
+  "sourceBranch": "feature",
+  "targetBranch": "main",
+  "hasConflict": true,
+  "conflictFiles": ["file1.txt", "file2.js"]
+}
+\`\`\`
+
+**충돌 처리:**
+- \`hasConflict: true\`인 경우 \`/repos/:repoId/conflicts/ai-suggest\` API로 AI 해결 제안을 받을 수 있습니다.
+`
+  })
+  @ApiResponse({
+    status: 200,
+    description: "병합이 완료됨. 응답에 충돌 정보 포함됨 (hasConflict, conflictFiles)",
+    type: MergeResponse,
+  })
   @Post(":repoId/merge")
   @HttpCode(HttpStatus.OK)
   async mergeBranch(
     @Param("repoId") repoId: string,
     @AuthUser() user: User,
     @Body() mergeBranchDto: MergeBranchDto,
-  ) {
+  ): Promise<MergeResponse> {
     return this.branchService.mergeBranch(
       repoId,
       user.id,

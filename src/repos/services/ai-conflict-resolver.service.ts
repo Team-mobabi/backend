@@ -32,42 +32,89 @@ export class AIConflictResolverService {
     filePath: string,
   ): Promise<AIResolutionResult> {
     try {
+      // 파일 확장자 추출
+      const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+
+      // 파일 타입별 언어 매핑
+      const languageMap: Record<string, string> = {
+        'js': 'JavaScript',
+        'jsx': 'JavaScript (React)',
+        'ts': 'TypeScript',
+        'tsx': 'TypeScript (React)',
+        'py': 'Python',
+        'java': 'Java',
+        'cpp': 'C++',
+        'c': 'C',
+        'go': 'Go',
+        'rs': 'Rust',
+        'rb': 'Ruby',
+        'php': 'PHP',
+        'swift': 'Swift',
+        'kt': 'Kotlin',
+        'cs': 'C#',
+        'html': 'HTML',
+        'css': 'CSS',
+        'scss': 'SCSS',
+        'json': 'JSON',
+        'yaml': 'YAML',
+        'yml': 'YAML',
+        'md': 'Markdown',
+        'txt': 'Plain Text',
+      };
+
+      const language = languageMap[fileExtension] || 'Unknown';
+
       const message = await this.anthropic.messages.create({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-sonnet-4-5-20250929",
         max_tokens: 4096,
         temperature: 0.2, // 낮은 온도 = 더 일관적이고 예측 가능한 출력
         messages: [
           {
             role: "user",
-            content: `You are an expert Git conflict resolver.
+            content: `You are an expert Git conflict resolver with deep knowledge of software development best practices.
 
-File: ${filePath}
+**File Information:**
+- Path: ${filePath}
+- Language: ${language}
+- Extension: .${fileExtension}
 
-This file has Git merge conflict markers. Analyze both versions and provide the best resolution.
+**Task:**
+This file has Git merge conflict markers. Analyze both versions carefully and provide the best resolution.
 
-Conflict content:
-\`\`\`
+**Conflict Content:**
+\`\`\`${fileExtension}
 ${conflictContent}
 \`\`\`
 
-Provide your response in this EXACT format:
+**Analysis Guidelines:**
+1. **Understand the Context**: Consider what each version is trying to achieve
+2. **Preserve Functionality**: Keep all important functionality from both versions
+3. **Code Quality**: Maintain consistent style, remove duplicates, ensure best practices
+4. **Language-Specific**: Apply ${language}-specific conventions and patterns
+5. **Safety First**: If uncertain, prefer the safer option that won't break existing code
+
+**Response Format** (MUST follow this EXACT format):
 
 MERGED_CODE:
-\`\`\`
-[put the resolved code here without any conflict markers]
+\`\`\`${fileExtension}
+[put the fully resolved code here with NO conflict markers]
 \`\`\`
 
 EXPLANATION:
-[explain in Korean why you chose this resolution - what from each version you kept or merged and why]
+[Explain in Korean (한국어):
+- 어떤 변경사항들이 충돌했는지
+- 각 버전에서 무엇을 선택했고 왜 그렇게 했는지
+- 병합 시 고려한 주요 사항들
+- ${language} 관련 best practice 적용 내용]
 
-CONFIDENCE: [a number from 0 to 100 representing your confidence in this resolution]
+CONFIDENCE: [0-100 사이의 숫자. 100 = 매우 확신, 0 = 불확실]
 
-Important:
+**Critical Requirements:**
 - Remove ALL conflict markers (<<<<<<, =======, >>>>>>>)
-- Preserve code functionality from both versions when possible
-- Keep the code style consistent
-- If one version is clearly better, use that one
-- If both have valuable changes, intelligently merge them`,
+- Ensure valid ${language} syntax
+- Preserve all important functionality
+- Maintain code style consistency
+- Never leave the code in a broken state`,
           },
         ],
       });

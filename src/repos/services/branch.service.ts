@@ -14,6 +14,7 @@ import simpleGit, {
 import { Repo } from "@src/repos/entities/repo.entity";
 import { ConfigService } from "@nestjs/config";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
+import { MergeResponse } from "@src/repos/dto/responses.dto";
 
 @Injectable()
 export class BranchService extends BaseRepoService {
@@ -132,7 +133,7 @@ export class BranchService extends BaseRepoService {
     sourceBranch: string,
     targetBranch?: string,
     fastForwardOnly = false,
-  ) {
+  ): Promise<MergeResponse> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
@@ -157,6 +158,11 @@ export class BranchService extends BaseRepoService {
       const afterHash = (await git.revparse(["HEAD"])).trim();
       const fastForward = beforeHash !== afterHash;
 
+      // 충돌 체크
+      const statusResult = await git.status();
+      const conflictFiles = statusResult.conflicted || [];
+      const hasConflict = conflictFiles.length > 0;
+
       return {
         success: true,
         fastForward,
@@ -164,6 +170,8 @@ export class BranchService extends BaseRepoService {
         to: afterHash,
         sourceBranch,
         targetBranch: finalTargetBranch,
+        hasConflict,
+        conflictFiles,
       };
     } catch (err) {
       if (/merge conflict/i.test(err.message)) {

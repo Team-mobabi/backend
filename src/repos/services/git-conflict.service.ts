@@ -75,13 +75,19 @@ export class GitConflictService extends BaseRepoService {
 
   /**
    * 안전한 Pull을 수행합니다 (충돌 처리 포함)
+   * 충돌이 발생해도 예외를 던지지 않고 응답에 충돌 정보를 포함합니다
    */
   async safePull(
     repoId: string,
     userId: string,
     remote = "origin",
     branch?: string,
-  ): Promise<{ success: boolean; conflicts?: string[]; message: string }> {
+  ): Promise<{
+    success: boolean;
+    hasConflict: boolean;
+    conflictFiles: string[];
+    message: string;
+  }> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     // 1. 로컬 변경사항 확인
@@ -99,9 +105,16 @@ export class GitConflictService extends BaseRepoService {
           await this.applyStash(repoId, userId, stashResult.stashId);
         }
 
+        // 충돌 확인
+        const conflictInfo = await this.checkForConflicts(repoId, userId);
+
         return {
           success: true,
-          message: "Pull 성공 (로컬 변경사항 자동 저장 및 복원)"
+          hasConflict: conflictInfo.hasConflict,
+          conflictFiles: conflictInfo.conflictFiles,
+          message: conflictInfo.hasConflict
+            ? "Pull 성공 (로컬 변경사항 자동 저장 및 복원, 충돌 발생)"
+            : "Pull 성공 (로컬 변경사항 자동 저장 및 복원)"
         };
       } catch (error) {
         // Pull 실패 시 stash 복원 시도
@@ -109,41 +122,54 @@ export class GitConflictService extends BaseRepoService {
           try {
             await this.applyStash(repoId, userId, stashResult.stashId);
           } catch (stashError) {
-            throw new GitStashConflictException(
-              await this.getConflictFiles(git)
-            );
+            const conflictFiles = await this.getConflictFiles(git);
+            throw new GitStashConflictException(conflictFiles);
           }
         }
 
-        // 충돌 확인
-        const conflictInfo = await this.checkForConflicts(repoId, userId);
-        if (conflictInfo.hasConflict) {
-          throw new GitPullConflictException({
-            message: "Pull 중 충돌이 발생했습니다",
-            conflictFiles: conflictInfo.conflictFiles,
-            localChanges: uncommittedChanges,
-          });
+        // 충돌이 아닌 다른 에러는 그대로 던짐
+        if (!/merge conflict|CONFLICT/i.test(error.message)) {
+          throw error;
         }
 
-        throw error;
+        // 충돌 정보 반환
+        const conflictInfo = await this.checkForConflicts(repoId, userId);
+        return {
+          success: true,
+          hasConflict: true,
+          conflictFiles: conflictInfo.conflictFiles,
+          message: "Pull 중 충돌이 발생했습니다"
+        };
       }
     }
 
     // 2. 변경사항이 없으면 바로 Pull
     try {
       await git.pull(remote, branch);
-      return { success: true, message: "Pull 성공" };
-    } catch (error) {
+
       // 충돌 확인
       const conflictInfo = await this.checkForConflicts(repoId, userId);
-      if (conflictInfo.hasConflict) {
-        throw new GitPullConflictException({
-          message: "Pull 중 충돌이 발생했습니다",
-          conflictFiles: conflictInfo.conflictFiles,
-        });
+
+      return {
+        success: true,
+        hasConflict: conflictInfo.hasConflict,
+        conflictFiles: conflictInfo.conflictFiles,
+        message: conflictInfo.hasConflict ? "Pull 중 충돌이 발생했습니다" : "Pull 성공"
+      };
+    } catch (error) {
+      // 충돌이 아닌 다른 에러는 그대로 던짐
+      if (!/merge conflict|CONFLICT/i.test(error.message)) {
+        throw error;
       }
 
-      throw error;
+      // 충돌 정보 반환
+      const conflictInfo = await this.checkForConflicts(repoId, userId);
+      return {
+        success: true,
+        hasConflict: true,
+        conflictFiles: conflictInfo.conflictFiles,
+        message: "Pull 중 충돌이 발생했습니다"
+      };
     }
   }
 
@@ -186,6 +212,7 @@ export class GitConflictService extends BaseRepoService {
 
   /**
    * 안전한 Merge를 수행합니다
+   * 충돌이 발생해도 예외를 던지지 않고 응답에 충돌 정보를 포함합니다
    */
   async safeMerge(
     repoId: string,
@@ -193,7 +220,12 @@ export class GitConflictService extends BaseRepoService {
     sourceBranch: string,
     targetBranch?: string,
     fastForwardOnly = false,
-  ): Promise<{ success: boolean; conflicts?: string[]; message: string }> {
+  ): Promise<{
+    success: boolean;
+    hasConflict: boolean;
+    conflictFiles: string[];
+    message: string;
+  }> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     // 현재 브랜치 확인
@@ -209,22 +241,35 @@ export class GitConflictService extends BaseRepoService {
       const options = fastForwardOnly ? ["--ff-only"] : [];
       await git.merge([sourceBranch, ...options]);
 
-      return { success: true, message: `${sourceBranch}를 성공적으로 병합했습니다` };
-    } catch (error) {
       // 충돌 확인
       const conflictInfo = await this.checkForConflicts(repoId, userId);
-      if (conflictInfo.hasConflict) {
-        throw new MergeConflictException(
-          `${conflictInfo.conflictFiles.length}개 파일에서 충돌 발생: ${conflictInfo.conflictFiles.join(", ")}`
-        );
+
+      return {
+        success: true,
+        hasConflict: conflictInfo.hasConflict,
+        conflictFiles: conflictInfo.conflictFiles,
+        message: conflictInfo.hasConflict
+          ? `${sourceBranch}를 병합했으나 충돌이 발생했습니다`
+          : `${sourceBranch}를 성공적으로 병합했습니다`
+      };
+    } catch (error) {
+      // 충돌이 아닌 다른 에러는 그대로 던짐
+      if (!/merge conflict|CONFLICT/i.test(error.message)) {
+        // 원래 브랜치로 복귀
+        if (targetBranch && currentBranch && targetBranch !== currentBranch) {
+          await git.checkout(currentBranch);
+        }
+        throw error;
       }
 
-      // 원래 브랜치로 복귀
-      if (targetBranch && currentBranch && targetBranch !== currentBranch) {
-        await git.checkout(currentBranch);
-      }
-
-      throw error;
+      // 충돌 정보 반환
+      const conflictInfo = await this.checkForConflicts(repoId, userId);
+      return {
+        success: true,
+        hasConflict: true,
+        conflictFiles: conflictInfo.conflictFiles,
+        message: `${sourceBranch} 병합 중 충돌이 발생했습니다`
+      };
     }
   }
 
