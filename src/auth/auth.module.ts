@@ -6,11 +6,13 @@ import type { StringValue } from "ms";
 import { AuthService } from "@src/auth/auth.service";
 import { AuthController } from "@src/auth/auth.controller";
 import { UsersModule } from "@src/users/users.module";
+import { EmailModule } from "@src/email/email.module";
 import { JwtStrategy } from "@src/auth/strategies/jwt.strategy";
 
 @Module({
   imports: [
     UsersModule,
+    EmailModule,
     PassportModule,
     ConfigModule,
     JwtModule.registerAsync({

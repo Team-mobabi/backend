@@ -64,6 +64,23 @@ export class FileAlreadyExistsException extends ConflictException {
 }
 
 /**
+ * 파일명이 너무 길 때 발생
+ */
+export class FilenameTooLongException extends BadRequestException {
+  constructor(filename: string, maxBytes: number, actualBytes: number) {
+    super({
+      statusCode: 400,
+      error: 'Filename Too Long',
+      message: '파일명이 너무 깁니다. 파일명을 짧게 변경해주세요.',
+      filename,
+      maxBytes,
+      actualBytes,
+      hint: '한글은 한 글자당 3바이트를 차지합니다. 영문과 숫자를 사용하거나 파일명을 50자 이내로 줄여주세요.',
+    });
+  }
+}
+
+/**
  * 경로가 파일이 아닌 디렉토리일 때 발생
  */
 export class PathIsDirectoryException extends BadRequestException {

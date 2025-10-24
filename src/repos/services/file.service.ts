@@ -3,6 +3,7 @@ import {
   FileNotFoundException,
   FileAlreadyExistsException,
   PathIsDirectoryException,
+  FilenameTooLongException,
 } from "@src/repos/exceptions/repo.exceptions";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
@@ -26,12 +27,26 @@ import { BaseRepoService } from "@src/repos/services/base-repo.service";
 
 @Injectable()
 export class FileService extends BaseRepoService {
+  private readonly MAX_FILENAME_BYTES = 200; // Linux 파일시스템 255바이트 제한, 안전하게 200바이트로 설정
+
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
     configService: ConfigService,
   ) {
     super(repoRepository, configService);
+  }
+
+  /**
+   * 파일명 길이 검증
+   * @param filename 검증할 파일명
+   * @throws FilenameTooLongException 파일명이 너무 긴 경우
+   */
+  private validateFilename(filename: string): void {
+    const filenameBytes = Buffer.byteLength(filename, 'utf8');
+    if (filenameBytes > this.MAX_FILENAME_BYTES) {
+      throw new FilenameTooLongException(filename, this.MAX_FILENAME_BYTES, filenameBytes);
+    }
   }
 
   async browseFiles(
@@ -138,6 +153,9 @@ export class FileService extends BaseRepoService {
     filePath = "",
     overwrite = false,
   ): Promise<FileOperationResult> {
+    // 파일명 길이 검증
+    this.validateFilename(filename);
+
     const { repo } = await this.getRepoAndGit(repoId, userId);
 
     const targetDir = path.join(repo.gitPath, filePath);
@@ -237,6 +255,11 @@ export class FileService extends BaseRepoService {
     uploadPath = "",
     overwrite = false,
   ): Promise<UploadResult> {
+    // 모든 파일명 검증 (업로드 시작 전에 미리 검증)
+    for (const file of files) {
+      this.validateFilename(file.originalname);
+    }
+
     const { repo } = await this.getRepoAndGit(repoId, userId);
 
     const targetDir = path.join(repo.gitPath, uploadPath);
