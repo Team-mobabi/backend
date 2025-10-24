@@ -47,7 +47,8 @@ import { ResetDto } from "@src/repos/dto/reset.dto";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { MergePullRequestDto } from "@src/repos/dto/merge-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
-import { PullRequestStatus } from "@src/repos/entities/pull-request.entity";
+import { PullRequestStatus, PullRequest } from "@src/repos/entities/pull-request.entity";
+import { PrReview } from "@src/repos/entities/pr-review.entity";
 import { User } from "@src/users/entities/user.entity";
 import { AuthUser } from "@src/repos/auth-user.decorator";
 import {
@@ -746,7 +747,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 생성" })
-  @ApiResponse({ status: 201, description: "Pull Request가 성공적으로 생성됨" })
+  @ApiResponse({
+    status: 201,
+    description: "Pull Request가 성공적으로 생성됨",
+    type: PullRequest,
+  })
   @Post(":repoId/pull-requests")
   @HttpCode(HttpStatus.CREATED)
   async createPullRequest(
@@ -763,7 +768,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 목록 조회" })
-  @ApiResponse({ status: 200, description: "Pull Request 목록 반환" })
+  @ApiResponse({
+    status: 200,
+    description: "Pull Request 목록 반환",
+    type: [PullRequest],
+  })
   @Get(":repoId/pull-requests")
   @HttpCode(HttpStatus.OK)
   async getPullRequests(
@@ -776,7 +785,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 상세 조회" })
-  @ApiResponse({ status: 200, description: "Pull Request 상세 정보 반환" })
+  @ApiResponse({
+    status: 200,
+    description: "Pull Request 상세 정보 반환",
+    type: PullRequest,
+  })
   @Get(":repoId/pull-requests/:prId")
   @HttpCode(HttpStatus.OK)
   async getPullRequest(
@@ -789,7 +802,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 병합" })
-  @ApiResponse({ status: 200, description: "Pull Request가 성공적으로 병합됨" })
+  @ApiResponse({
+    status: 200,
+    description: "Pull Request가 성공적으로 병합됨",
+    type: PullRequest,
+  })
   @Post(":repoId/pull-requests/:prId/merge")
   @HttpCode(HttpStatus.OK)
   async mergePullRequest(
@@ -808,7 +825,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 닫기" })
-  @ApiResponse({ status: 200, description: "Pull Request가 성공적으로 닫힘" })
+  @ApiResponse({
+    status: 200,
+    description: "Pull Request가 성공적으로 닫힘",
+    type: PullRequest,
+  })
   @Post(":repoId/pull-requests/:prId/close")
   @HttpCode(HttpStatus.OK)
   async closePullRequest(
@@ -821,7 +842,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 리뷰 작성" })
-  @ApiResponse({ status: 201, description: "리뷰가 성공적으로 작성됨" })
+  @ApiResponse({
+    status: 201,
+    description: "리뷰가 성공적으로 작성됨",
+    type: PrReview,
+  })
   @Post(":repoId/pull-requests/:prId/reviews")
   @HttpCode(HttpStatus.CREATED)
   async createReview(
@@ -840,7 +865,11 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Pull Requests")
   @ApiOperation({ summary: "Pull Request 리뷰 목록 조회" })
-  @ApiResponse({ status: 200, description: "리뷰 목록 반환" })
+  @ApiResponse({
+    status: 200,
+    description: "리뷰 목록 반환",
+    type: [PrReview],
+  })
   @Get(":repoId/pull-requests/:prId/reviews")
   @HttpCode(HttpStatus.OK)
   async getReviews(

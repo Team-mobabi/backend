@@ -65,6 +65,7 @@ export class ReposService extends BaseRepoService {
   async findPublicRepos(): Promise<Repo[]> {
     return this.repoRepository.find({
       where: { isPrivate: false },
+      relations: ["owner"],
       order: { createdAt: "DESC" },
     });
   }
@@ -72,6 +73,7 @@ export class ReposService extends BaseRepoService {
   async findPublicReposByOwner(ownerId: string): Promise<Repo[]> {
     return this.repoRepository.find({
       where: { ownerId, isPrivate: false },
+      relations: ["owner"],
       order: { createdAt: "DESC" },
     });
   }
@@ -109,16 +111,15 @@ export class ReposService extends BaseRepoService {
     savedRepo.gitPath = path.join(this.repoBasePath, savedRepo.repoId);
 
     try {
-      // git clone으로 원본 레포 복사
+      // git clone으로 원본 레포 복사 (일반 clone 사용)
       await this.ensureDirectoryExists(path.dirname(savedRepo.gitPath));
       const git = simpleGit();
 
-      await git.clone(sourceRepo.gitPath, savedRepo.gitPath, ["--bare"]);
+      // --bare 없이 일반 clone으로 working tree 포함
+      await git.clone(sourceRepo.gitPath, savedRepo.gitPath);
 
-      // bare 레포를 일반 레포로 변환
+      // GPG 서명 비활성화
       const forkedGit = simpleGit(savedRepo.gitPath);
-      await forkedGit.raw(["config", "--bool", "core.bare", "false"]);
-      await forkedGit.raw(["reset", "--hard"]);
       await forkedGit.addConfig("commit.gpgsign", "false");
 
       return this.repoRepository.save(savedRepo);

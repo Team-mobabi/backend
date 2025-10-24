@@ -3,8 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
+  ManyToOne,
+  JoinColumn,
 } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
+import { User } from "@src/users/entities/user.entity";
 
 @Entity()
 export class Repo {
@@ -21,6 +24,14 @@ export class Repo {
   })
   @Column()
   ownerId: string;
+
+  @ApiProperty({
+    description: "레포지토리 소유자 정보",
+    type: () => User,
+  })
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: "ownerId" })
+  owner?: User;
 
   @ApiProperty({
     description: "레포지토리 이름",

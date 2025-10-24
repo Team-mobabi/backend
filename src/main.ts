@@ -1,6 +1,6 @@
-import { NestFactory } from "@nestjs/core";
+import { NestFactory, Reflector } from "@nestjs/core";
 import { AppModule } from "./app.module";
-import { ValidationPipe } from "@nestjs/common";
+import { ValidationPipe, ClassSerializerInterceptor } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
@@ -29,6 +29,9 @@ async function bootstrap() {
     }),
   );
 
+  // ClassSerializerInterceptor 추가 - @Exclude() 데코레이터가 작동하도록
+  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
+
   const config = new DocumentBuilder()
     .setTitle("Git Project API")
     .setDescription("Git 레포지토리 관리 시스템 API")
@@ -47,15 +50,15 @@ async function bootstrap() {
 
   // "Repos" 태그 제거 (Controller 경로에서 자동 생성된 태그)
   if (document.tags) {
-    document.tags = document.tags.filter(tag => tag.name !== 'Repos');
+    document.tags = document.tags.filter((tag: { name: string }) => tag.name !== 'Repos');
   }
 
   // 모든 엔드포인트에서 "Repos" 태그 제거
-  Object.keys(document.paths).forEach(path => {
-    Object.keys(document.paths[path]).forEach(method => {
+  Object.keys(document.paths).forEach((path: string) => {
+    Object.keys(document.paths[path]).forEach((method: string) => {
       const operation = document.paths[path][method];
       if (operation.tags) {
-        operation.tags = operation.tags.filter(tag => tag !== 'Repos');
+        operation.tags = operation.tags.filter((tag: string) => tag !== 'Repos');
       }
     });
   });
