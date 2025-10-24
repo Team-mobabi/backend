@@ -38,7 +38,14 @@ export class EmailController {
     };
   }
 
-  @Post("verify-number")
+  @Post("test")
+  @HttpCode(HttpStatus.OK)
+  test() {
+    console.log('[EmailController.test] TEST ENDPOINT HIT!');
+    return { success: true, message: "TEST ENDPOINT WORKS!" };
+  }
+
+  @Post("verify-code")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "인증 코드 검증",
