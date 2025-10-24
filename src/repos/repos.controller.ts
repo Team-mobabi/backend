@@ -23,7 +23,8 @@ import {
   ApiBody,
 } from "@nestjs/swagger";
 import { FilesInterceptor } from "@nestjs/platform-express";
-import { AuthGuard } from "@nestjs/passport";
+import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { Public } from "@src/repos/public.decorator";
 import { ReposService } from "@src/repos/repos.service";
 import { GitRemoteService } from "@src/repos/services/git-remote.service";
 import { GitOperationService } from "@src/repos/services/git-operation.service";
@@ -40,6 +41,7 @@ import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
 import { PushDto } from "@src/repos/dto/push.dto";
 import { PullDto } from "@src/repos/dto/pull.dto";
 import { MergeResponse, PullResponse } from "@src/repos/dto/responses.dto";
+import { RepoResponseDto } from "@src/repos/dto/repo-response.dto";
 import { CreateLocalRemoteDto } from "@src/repos/dto/create-local-remote.dto";
 import { AddDto } from "@src/repos/dto/add.dto";
 import { CommitDto } from "@src/repos/dto/commit.dto";
@@ -62,7 +64,7 @@ import { MergeBranchDto } from "@src/repos/dto/merge-branch.dto";
 
 @ApiBearerAuth("JWT-auth")
 @Controller("repos")
-@UseGuards(AuthGuard("jwt"))
+@UseGuards(JwtAuthGuard)
 export class ReposController {
   constructor(
     private readonly reposService: ReposService,
@@ -80,15 +82,15 @@ export class ReposController {
   @ApiOperation({ summary: "새 레포지토리 생성" })
   @ApiResponse({
     status: 201,
-    description: "레포지토리가 성공적으로 생성됨",
-    type: Repo,
+    description: "레포지토리가 성공적으로 생성됨 (소유자 이메일 포함)",
+    type: RepoResponseDto,
   })
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createRepo(
     @Body() createRepoDto: CreateRepoDto,
     @AuthUser() user: User,
-  ): Promise<Repo> {
+  ): Promise<RepoResponseDto> {
     return this.reposService.createRepo(createRepoDto, user.id);
   }
 
@@ -129,40 +131,42 @@ export class ReposController {
   @ApiOperation({ summary: "내 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
-    description: "레포지토리 목록 반환",
-    type: [Repo],
+    description: "레포지토리 목록 반환 (소유자 이메일 포함)",
+    type: [RepoResponseDto],
   })
   @Get()
   @HttpCode(HttpStatus.OK)
-  async getMyRepos(@AuthUser() user: User): Promise<Repo[]> {
+  async getMyRepos(@AuthUser() user: User): Promise<RepoResponseDto[]> {
     return this.reposService.findReposByOwner(user.id);
   }
 
+  @Public()
   @ApiTags("Repositories")
   @ApiOperation({ summary: "공개 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
-    description: "공개 레포지토리 목록 반환",
-    type: [Repo],
+    description: "공개 레포지토리 목록 반환 (소유자 이메일 포함)",
+    type: [RepoResponseDto],
   })
   @Get("public")
   @HttpCode(HttpStatus.OK)
-  async getPublicRepos(): Promise<Repo[]> {
+  async getPublicRepos(): Promise<RepoResponseDto[]> {
     return this.reposService.findPublicRepos();
   }
 
+  @Public()
   @ApiTags("Repositories")
   @ApiOperation({ summary: "특정 사용자의 공개 레포지토리 목록 조회" })
   @ApiResponse({
     status: 200,
-    description: "사용자의 공개 레포지토리 목록 반환",
-    type: [Repo],
+    description: "사용자의 공개 레포지토리 목록 반환 (소유자 이메일 포함)",
+    type: [RepoResponseDto],
   })
   @Get("public/user/:userId")
   @HttpCode(HttpStatus.OK)
   async getPublicReposByUser(
     @Param("userId") userId: string,
-  ): Promise<Repo[]> {
+  ): Promise<RepoResponseDto[]> {
     return this.reposService.findPublicReposByOwner(userId);
   }
 
@@ -170,15 +174,15 @@ export class ReposController {
   @ApiOperation({ summary: "레포지토리 Fork" })
   @ApiResponse({
     status: 201,
-    description: "레포지토리가 성공적으로 Fork됨",
-    type: Repo,
+    description: "레포지토리가 성공적으로 Fork됨 (소유자 이메일 포함)",
+    type: RepoResponseDto,
   })
   @Post("fork")
   @HttpCode(HttpStatus.CREATED)
   async forkRepo(
     @Body() forkRepoDto: ForkRepoDto,
     @AuthUser() user: User,
-  ): Promise<Repo> {
+  ): Promise<RepoResponseDto> {
     return this.reposService.forkRepo(forkRepoDto, user.id);
   }
 
