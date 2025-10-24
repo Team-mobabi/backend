@@ -37,16 +37,21 @@ export class EmailService {
    * 인증 이메일 발송
    */
   async sendVerificationEmail(email: string): Promise<void> {
+    console.log('[sendVerificationEmail] 요청 받음:', { email, timestamp: new Date().toISOString() });
+
     // 이전 미인증 코드 삭제
-    await this.emailVerificationRepository.delete({
+    const deleted = await this.emailVerificationRepository.delete({
       email,
       verified: false,
     });
+    console.log('[sendVerificationEmail] 이전 미인증 코드 삭제:', deleted);
 
     // 인증 코드 생성
     const code = this.generateVerificationCode();
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5분 후 만료
+
+    console.log('[sendVerificationEmail] 생성된 코드:', { code, expiresAt: expiresAt.toISOString() });
 
     // DB에 저장
     const verification = this.emailVerificationRepository.create({
@@ -55,7 +60,14 @@ export class EmailService {
       expiresAt,
       verified: false,
     });
-    await this.emailVerificationRepository.save(verification);
+    const savedVerification = await this.emailVerificationRepository.save(verification);
+    console.log('[sendVerificationEmail] DB에 저장 완료:', {
+      id: savedVerification.id,
+      email: savedVerification.email,
+      code: savedVerification.code,
+      expiresAt: savedVerification.expiresAt.toISOString(),
+      verified: savedVerification.verified,
+    });
 
     // 이메일 발송
     const mailOptions = {
@@ -77,7 +89,9 @@ export class EmailService {
 
     try {
       await this.transporter.sendMail(mailOptions);
+      console.log('[sendVerificationEmail] 이메일 발송 성공');
     } catch (error) {
+      console.error('[sendVerificationEmail] 이메일 발송 실패:', error);
       throw new BadRequestException(
         "이메일 발송에 실패했습니다. 잠시 후 다시 시도해주세요.",
       );
@@ -88,10 +102,24 @@ export class EmailService {
    * 인증 코드 검증
    */
   async verifyCode(email: string, code: string): Promise<boolean> {
+    console.log('[verifyCode] 요청 받음:', { email, code, timestamp: new Date().toISOString() });
+
     // 만료된 코드 삭제
-    await this.emailVerificationRepository.delete({
+    const deletedExpired = await this.emailVerificationRepository.delete({
       expiresAt: LessThan(new Date()),
     });
+    console.log('[verifyCode] 만료된 코드 삭제:', deletedExpired);
+
+    // DB에 있는 모든 해당 이메일의 인증 코드 조회 (디버깅용)
+    const allVerifications = await this.emailVerificationRepository.find({
+      where: { email },
+    });
+    console.log('[verifyCode] 해당 이메일의 모든 인증 코드:', allVerifications.map(v => ({
+      code: v.code,
+      verified: v.verified,
+      expiresAt: v.expiresAt,
+      createdAt: v.createdAt,
+    })));
 
     // 인증 코드 조회
     const verification = await this.emailVerificationRepository.findOne({
@@ -102,14 +130,31 @@ export class EmailService {
       },
     });
 
+    console.log('[verifyCode] 조회된 인증 코드:', verification ? {
+      id: verification.id,
+      code: verification.code,
+      verified: verification.verified,
+      expiresAt: verification.expiresAt,
+      createdAt: verification.createdAt,
+    } : null);
+
     if (!verification) {
+      console.error('[verifyCode] 인증 코드를 찾을 수 없음');
       throw new BadRequestException(
         "유효하지 않은 인증 코드입니다. 다시 확인해주세요.",
       );
     }
 
     // 만료 확인
-    if (verification.expiresAt < new Date()) {
+    const now = new Date();
+    console.log('[verifyCode] 만료 확인:', {
+      now: now.toISOString(),
+      expiresAt: verification.expiresAt.toISOString(),
+      isExpired: verification.expiresAt < now,
+    });
+
+    if (verification.expiresAt < now) {
+      console.error('[verifyCode] 인증 코드 만료됨');
       throw new BadRequestException(
         "인증 코드가 만료되었습니다. 새로운 코드를 요청해주세요.",
       );
@@ -118,6 +163,7 @@ export class EmailService {
     // 인증 완료 처리
     verification.verified = true;
     await this.emailVerificationRepository.save(verification);
+    console.log('[verifyCode] 인증 완료 처리 성공');
 
     return true;
   }
