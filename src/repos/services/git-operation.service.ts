@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Repo } from "@src/repos/entities/repo.entity";
+import { User } from "@src/users/entities/user.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { GitOperationException } from "@src/repos/exceptions/repo.exceptions";
 import { ResetMode } from "@src/repos/dto/reset.dto";
@@ -105,7 +106,7 @@ export class GitOperationService extends BaseRepoService {
     message: string,
     branch?: string,
   ) {
-    const { git } = await this.getRepoAndGit(repoId, userId);
+    const { repo, git } = await this.getRepoAndGit(repoId, userId);
 
     // 브랜치 전환 (필요한 경우)
     if (branch) {
@@ -122,11 +123,20 @@ export class GitOperationService extends BaseRepoService {
       }
     }
 
-    // 커밋 실행
+    // 사용자 정보 가져오기
+    const user = await this.repoRepository.manager.findOne(User, {
+      where: { id: userId },
+    });
+
+    // 커밋 실행 (사용자별 Author 정보 설정)
     let commitResult;
     try {
+      const authorName = user?.email?.split('@')[0] || 'Unknown';
+      const authorEmail = user?.email || 'unknown@example.com';
+
       commitResult = await git.commit(message, undefined, {
         "--no-gpg-sign": null,
+        "--author": `${authorName} <${authorEmail}>`,
       });
     } catch (err) {
       if (/nothing to commit/i.test(err.message)) {

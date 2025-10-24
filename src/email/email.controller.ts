@@ -38,13 +38,6 @@ export class EmailController {
     };
   }
 
-  @Post("test")
-  @HttpCode(HttpStatus.OK)
-  test() {
-    console.log('[EmailController.test] TEST ENDPOINT HIT!');
-    return { success: true, message: "TEST ENDPOINT WORKS!" };
-  }
-
   @Post("verify-code")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -67,18 +60,10 @@ export class EmailController {
     description: "유효하지 않거나 만료된 인증 코드",
   })
   async verifyCode(@Body() verifyCodeDto: VerifyCodeDto) {
-    console.log('[EmailController.verifyCode] 요청 받음:', {
-      body: verifyCodeDto,
-      timestamp: new Date().toISOString(),
-    });
-
     const verified = await this.emailService.verifyCode(
       verifyCodeDto.email,
       verifyCodeDto.code,
     );
-
-    console.log('[EmailController.verifyCode] 응답:', { verified });
-
     return {
       verified,
       message: "이메일 인증이 완료되었습니다.",
