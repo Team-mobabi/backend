@@ -128,11 +128,15 @@ export class GitOperationService extends BaseRepoService {
       where: { id: userId },
     });
 
+    console.log('[commit] User Info:', { userId, email: user?.email });
+
     // 커밋 실행 (사용자별 Author 정보 설정)
     let commitResult;
     try {
       const authorName = user?.email?.split('@')[0] || 'Unknown';
       const authorEmail = user?.email || 'unknown@example.com';
+
+      console.log('[commit] Author:', `${authorName} <${authorEmail}>`);
 
       commitResult = await git.commit(message, undefined, {
         "--no-gpg-sign": null,
