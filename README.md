@@ -50,6 +50,55 @@ A modern Git repository management system built with NestJS, featuring user auth
 
 ---
 
+## 🏗 System Architecture
+
+```mermaid
+graph TB
+    User[👤 User/Client]
+    Frontend[React Frontend<br/>Vite + React]
+    Backend[NestJS Backend<br/>Port: 3000]
+    DB[(PostgreSQL<br/>Database)]
+    Email[📧 SMTP Server<br/>Email Verification]
+    GitStorage[📁 Git Repository<br/>Storage]
+
+    User -->|HTTP/HTTPS| Frontend
+    Frontend -->|REST API<br/>JWT Auth| Backend
+    Backend -->|TypeORM| DB
+    Backend -->|Nodemailer| Email
+    Backend -->|Simple-git| GitStorage
+
+    subgraph "Client Layer"
+        User
+        Frontend
+    end
+
+    subgraph "Server Layer"
+        Backend
+        DB
+        GitStorage
+    end
+
+    subgraph "External Services"
+        Email
+    end
+
+    style Backend fill:#e0234e
+    style Frontend fill:#61dafb
+    style DB fill:#336791
+    style Email fill:#ffa500
+    style GitStorage fill:#f05032
+```
+
+### Key Components
+
+- **Frontend (React)**: User interface built with React and Vite
+- **Backend (NestJS)**: RESTful API server with JWT authentication
+- **Database (PostgreSQL)**: Stores user data, repositories, and metadata
+- **Email Service**: Sends verification codes via SMTP
+- **Git Storage**: Manages repository files using simple-git
+
+---
+
 ## 🛠 Tech Stack
 
 ### Core Framework
