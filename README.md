@@ -97,6 +97,215 @@ graph TB
 - **Email Service**: Sends verification codes via SMTP
 - **Git Storage**: Manages repository files using simple-git
 
+### Detailed Architecture
+
+```mermaid
+graph TB
+    subgraph "Client Layer"
+        WebBrowser[Web Browser]
+    end
+
+    subgraph "API Gateway Layer"
+        NestApp[NestJS Application<br/>main.ts]
+        Swagger[Swagger/OpenAPI<br/>API Docs]
+    end
+
+    subgraph "Controller Layer"
+        AuthCtrl[AuthController<br/>signup, signin]
+        UserCtrl[UsersController<br/>me, search]
+        RepoCtrl[ReposController<br/>CRUD, git operations]
+        EmailCtrl[EmailController<br/>verification]
+    end
+
+    subgraph "Service Layer"
+        AuthSvc[AuthService<br/>JWT Auth]
+        UserSvc[UsersService<br/>User Management]
+        RepoSvc[ReposService<br/>Repository Management]
+
+        subgraph "Repo Services"
+            GitRemoteSvc[GitRemoteService<br/>push, pull]
+            GitOpSvc[GitOperationService<br/>add, commit, reset]
+            BranchSvc[BranchService<br/>branch operations]
+            PRSvc[PullRequestService<br/>PR management]
+            FileSvc[FileService<br/>file operations]
+            ConflictSvc[GitConflictService<br/>conflict resolution]
+            AISvc[AIConflictResolverService<br/>Claude AI]
+            DiffSvc[GitDiffService<br/>diff operations]
+        end
+
+        EmailSvc[EmailService<br/>SMTP]
+    end
+
+    subgraph "Data Access Layer"
+        TypeORM[TypeORM]
+
+        subgraph "Entities"
+            UserEntity[User Entity]
+            RepoEntity[Repo Entity]
+            PREntity[PullRequest Entity]
+            ReviewEntity[PrReview Entity]
+            EmailEntity[EmailVerification Entity]
+        end
+    end
+
+    subgraph "External Dependencies"
+        PostgreSQL[(PostgreSQL<br/>Database)]
+        GitFS[Git File System<br/>Local Storage]
+        SMTP[SMTP Server]
+        ClaudeAPI[Claude AI API<br/>Conflict Resolution]
+    end
+
+    WebBrowser --> NestApp
+    WebBrowser --> Swagger
+    NestApp --> AuthCtrl
+    NestApp --> UserCtrl
+    NestApp --> RepoCtrl
+    NestApp --> EmailCtrl
+
+    AuthCtrl --> AuthSvc
+    UserCtrl --> UserSvc
+    RepoCtrl --> RepoSvc
+    RepoCtrl --> GitRemoteSvc
+    RepoCtrl --> GitOpSvc
+    RepoCtrl --> BranchSvc
+    RepoCtrl --> PRSvc
+    RepoCtrl --> FileSvc
+    RepoCtrl --> ConflictSvc
+    RepoCtrl --> AISvc
+    RepoCtrl --> DiffSvc
+    EmailCtrl --> EmailSvc
+
+    AuthSvc --> TypeORM
+    UserSvc --> TypeORM
+    RepoSvc --> TypeORM
+    PRSvc --> TypeORM
+    EmailSvc --> TypeORM
+
+    TypeORM --> UserEntity
+    TypeORM --> RepoEntity
+    TypeORM --> PREntity
+    TypeORM --> ReviewEntity
+    TypeORM --> EmailEntity
+
+    UserEntity --> PostgreSQL
+    RepoEntity --> PostgreSQL
+    PREntity --> PostgreSQL
+    ReviewEntity --> PostgreSQL
+    EmailEntity --> PostgreSQL
+
+    GitRemoteSvc --> GitFS
+    GitOpSvc --> GitFS
+    BranchSvc --> GitFS
+    FileSvc --> GitFS
+    ConflictSvc --> GitFS
+    DiffSvc --> GitFS
+
+    EmailSvc --> SMTP
+    AISvc --> ClaudeAPI
+
+    style NestApp fill:#e0234e
+    style PostgreSQL fill:#336791
+    style ClaudeAPI fill:#d97757
+```
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant AuthController
+    participant EmailService
+    participant AuthService
+    participant Database
+
+    User->>Frontend: 1. Enter email
+    Frontend->>EmailController: 2. POST /email/send-verification
+    EmailController->>EmailService: 3. Generate code
+    EmailService->>Database: 4. Save verification code
+    EmailService->>User: 5. Send email with code
+
+    User->>Frontend: 6. Enter verification code
+    Frontend->>EmailController: 7. POST /email/verify-code
+    EmailController->>EmailService: 8. Check code
+    EmailService->>Database: 9. Verify & mark as verified
+    EmailService-->>Frontend: 10. Verification success
+
+    User->>Frontend: 11. Complete signup
+    Frontend->>AuthController: 12. POST /auth/signup
+    AuthController->>AuthService: 13. Create user (hash password)
+    AuthService->>Database: 14. Save user
+    AuthService-->>Frontend: 15. Registration success
+
+    User->>Frontend: 16. Login
+    Frontend->>AuthController: 17. POST /auth/signin
+    AuthController->>AuthService: 18. Validate credentials
+    AuthService->>Database: 19. Find user
+    AuthService-->>Frontend: 20. Return JWT token
+    Frontend->>Frontend: 21. Store token
+```
+
+### Git Operations Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant ReposController
+    participant GitOperationService
+    participant GitFileSystem
+
+    User->>Frontend: 1. Modify files
+    Frontend->>ReposController: 2. POST /repos/:id/files
+    ReposController->>GitFileSystem: 3. Write files
+
+    Frontend->>ReposController: 4. POST /repos/:id/add
+    ReposController->>GitOperationService: 5. Stage files
+    GitOperationService->>GitFileSystem: 6. git add
+
+    Frontend->>ReposController: 7. POST /repos/:id/commit
+    ReposController->>GitOperationService: 8. Create commit
+    GitOperationService->>GitFileSystem: 9. git commit
+
+    Frontend->>ReposController: 10. POST /repos/:id/push
+    ReposController->>GitOperationService: 11. Push to remote
+    GitOperationService->>GitFileSystem: 12. git push
+    GitFileSystem-->>Frontend: 13. Push success
+```
+
+### AI Conflict Resolution Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant ReposController
+    participant ConflictService
+    participant AIService
+    participant Claude
+
+    User->>Frontend: 1. Merge branches
+    Frontend->>ReposController: 2. POST /repos/:id/merge
+    ReposController->>ConflictService: 3. Attempt merge
+    ConflictService-->>Frontend: 4. Conflict detected
+
+    Frontend->>ReposController: 5. GET /repos/:id/conflicts
+    ReposController->>ConflictService: 6. Get conflict files
+    ConflictService-->>Frontend: 7. Return conflict list
+
+    User->>Frontend: 8. Request AI suggestion
+    Frontend->>ReposController: 9. POST /repos/:id/conflicts/ai-suggest
+    ReposController->>AIService: 10. Analyze conflict
+    AIService->>Claude: 11. Send conflict content
+    Claude-->>AIService: 12. Return resolution
+    AIService-->>Frontend: 13. Suggested code + explanation
+
+    User->>Frontend: 14. Accept suggestion
+    Frontend->>ReposController: 15. POST /repos/:id/conflicts/resolve
+    ReposController->>ConflictService: 16. Apply resolution
+    ConflictService-->>Frontend: 17. Conflict resolved
+```
+
 ---
 
 ## 🛠 Tech Stack
@@ -207,30 +416,6 @@ The application will be available at `http://localhost:3000`
 Once the application is running, access the interactive API documentation:
 
 - **Swagger UI**: `http://localhost:3000/api`
-
----
-
-## 🧪 Testing
-
-### Run Unit Tests
-```bash
-bun run test
-```
-
-### Run E2E Tests
-```bash
-bun run test:e2e
-```
-
-### Test Coverage
-```bash
-bun run test:cov
-```
-
-### Watch Mode
-```bash
-bun run test:watch
-```
 
 ---
 
