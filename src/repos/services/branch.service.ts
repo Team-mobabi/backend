@@ -319,7 +319,7 @@ export class BranchService extends BaseRepoService {
         );
 
         // 여러 브랜치가 같은 커밋을 가리킬 때: main 우선, 그 다음 사전순
-        let headBranch = null;
+        let headBranch: string | null = null;
         if (headsPointingHere.length > 0) {
           const mainHead = headsPointingHere.find(([name, _]) => name === 'main');
           headBranch = mainHead ? mainHead[0] : headsPointingHere[0][0];
