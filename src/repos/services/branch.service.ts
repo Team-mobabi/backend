@@ -268,13 +268,15 @@ export class BranchService extends BaseRepoService {
         while (currentHash && !visited.has(currentHash)) {
           visited.add(currentHash);
 
-          if (!commitToBranches.has(currentHash)) {
-            commitToBranches.set(currentHash, []);
-          }
-          commitToBranches.get(currentHash)?.push(branchName);
-
-          const commit = allCommits.find(c => c.hash.startsWith(currentHash as string));
+          // 전체 해시와 짧은 해시 모두 매핑
+          const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
           if (!commit) break;
+
+          const fullHash = commit.hash;
+          if (!commitToBranches.has(fullHash)) {
+            commitToBranches.set(fullHash, []);
+          }
+          commitToBranches.get(fullHash)?.push(branchName);
 
           // 첫 번째 부모만 따라감 (메인 라인)
           currentHash = commit.parents[0] || null;
@@ -310,8 +312,10 @@ export class BranchService extends BaseRepoService {
       // 커밋에 브랜치 정보 추가
       const enrichedCommits = allCommits.map(commit => {
         const branches = commitToBranches.get(commit.hash) || [];
+
+        // isHead 계산: 전체 해시와 짧은 해시 모두 확인
         const isHead = Object.entries(localBranches).find(
-          ([_, hash]) => hash.startsWith(commit.hash)
+          ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
         );
 
         return {
