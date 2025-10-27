@@ -230,7 +230,23 @@ export class GitRemoteService extends BaseRepoService {
 
     // push 실행 (upstream 미설정 에러 처리)
     try {
+      console.log('[GitRemote] Push 시작:', {
+        repoId,
+        remote,
+        targetBranch,
+        ahead,
+        note: '🚀 실제로 Push를 수행합니다'
+      });
+
       const res = await git.push(remote, targetBranch);
+
+      console.log('[GitRemote] Push 성공:', {
+        repoId,
+        remote,
+        targetBranch,
+        pushed: res.pushed
+      });
+
       return {
         success: true,
         upToDate: false,

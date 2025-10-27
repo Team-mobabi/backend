@@ -153,6 +153,13 @@ export class GitOperationService extends BaseRepoService {
       const [{ hash, message: msg, date }] = (await git.log({ maxCount: 1 }))
         .all;
 
+      console.log('[GitOperation] Commit 성공:', {
+        hash,
+        message: msg,
+        repoId,
+        note: '⚠️ Push는 별도로 수행해야 합니다'
+      });
+
       return {
         success: true,
         commitHash: hash,
