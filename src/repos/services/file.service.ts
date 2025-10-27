@@ -223,23 +223,33 @@ export class FileService extends BaseRepoService {
     userId: string,
     filePath: string,
   ): Promise<FileDeleteResult> {
-    const { repo } = await this.getRepoAndGit(repoId, userId);
+    const { repo, git } = await this.getRepoAndGit(repoId, userId);
 
     const fullPath = path.join(repo.gitPath, filePath);
 
     try {
       const stats = await fs.stat(fullPath);
+      const isDirectory = stats.isDirectory();
 
-      if (stats.isDirectory()) {
+      if (isDirectory) {
         await fs.rm(fullPath, { recursive: true });
       } else {
         await fs.unlink(fullPath);
       }
 
+      // Git에 삭제 상태를 스테이징 (git add 또는 git rm)
+      try {
+        // git add는 삭제된 파일도 자동으로 스테이징합니다
+        await git.add(filePath);
+      } catch (gitError) {
+        // git add가 실패하면 (이미 추적되지 않는 파일 등) 무시
+        console.warn(`[FileService] Git add failed for ${filePath}:`, gitError.message);
+      }
+
       return {
         success: true,
         deletedPath: filePath,
-        type: stats.isDirectory() ? ("folder" as const) : ("file" as const),
+        type: isDirectory ? ("folder" as const) : ("file" as const),
       } as FileDeleteResult;
     } catch (err) {
       if (err.code === "ENOENT") {
