@@ -305,7 +305,15 @@ export class FileService extends BaseRepoService {
     const uploadedFiles: UploadedFileInfo[] = [];
 
     for (const file of filteredFiles) {
-      const targetFilePath = path.join(targetDir, file.originalname);
+      // file.originalname에서 경로와 파일명 분리 (폴더 구조 유지)
+      const fileDir = path.dirname(file.originalname);
+      const fileName = path.basename(file.originalname);
+
+      // 중간 디렉토리까지 포함한 전체 경로 생성
+      const fullTargetDir = path.join(targetDir, fileDir);
+      await this.ensureDirectoryExists(fullTargetDir);
+
+      const targetFilePath = path.join(fullTargetDir, fileName);
 
       if (!overwrite) {
         try {
