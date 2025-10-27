@@ -267,33 +267,27 @@ export class BranchService extends BaseRepoService {
       const branchForkPoints: Record<string, string | null> = {};
 
       if (localBranches.main) {
-        // main의 모든 커밋 해시 수집 (merge 커밋의 모든 부모도 추적)
+        // main의 첫 번째 부모만 추적 (merge 전 main history만 수집)
         const mainCommits = new Set<string>();
-        const queue: string[] = [localBranches.main];
+        let currentHash: string | null = localBranches.main;
         const visited = new Set<string>();
 
-        console.log('[getGraph] Collecting main commits, starting from:', localBranches.main.substring(0, 7));
+        console.log('[getGraph] Collecting main commits (first-parent only), starting from:', localBranches.main.substring(0, 7));
 
-        while (queue.length > 0) {
-          const currentHash = queue.shift()!;
-          if (visited.has(currentHash)) continue;
+        while (currentHash && !visited.has(currentHash)) {
           visited.add(currentHash);
 
           const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
           if (!commit) {
             console.log('[getGraph] Commit not found in allCommits:', currentHash.substring(0, 7));
-            continue;
+            break;
           }
 
           console.log('[getGraph] Adding to mainCommits:', commit.shortHash, commit.message);
           mainCommits.add(commit.hash);
 
-          // 모든 부모를 큐에 추가 (merge 커밋의 경우 여러 부모가 있을 수 있음)
-          commit.parents.forEach(parentHash => {
-            if (parentHash && !visited.has(parentHash)) {
-              queue.push(parentHash);
-            }
-          });
+          // 첫 번째 부모만 추적 (merge 커밋의 경우 첫 번째 부모는 merge 전 main)
+          currentHash = commit.parents[0] || null;
         }
 
         console.log('[getGraph] Total main commits collected:', mainCommits.size);
