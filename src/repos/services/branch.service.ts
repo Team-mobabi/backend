@@ -229,6 +229,9 @@ export class BranchService extends BaseRepoService {
         }
       }
 
+      console.log('[getGraph] Local branches:', Object.entries(localBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
+      console.log('[getGraph] Remote branches:', Object.entries(remoteBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
+
       // 모든 커밋 가져오기 (시간순 정렬)
       const pretty = "%H|%P|%an|%ai|%s";
       const args: string[] = [
@@ -258,24 +261,76 @@ export class BranchService extends BaseRepoService {
           };
         });
 
-      // 각 브랜치의 fork point 먼저 계산
+      // 각 브랜치의 fork point 계산
+      // Merge 후에는 merge-base가 정확하지 않으므로,
+      // 브랜치 HEAD부터 역추적하여 main과 공통된 첫 커밋을 찾습니다
       const branchForkPoints: Record<string, string | null> = {};
 
       if (localBranches.main) {
+        // main의 모든 커밋 해시 수집 (merge 커밋의 모든 부모도 추적)
+        const mainCommits = new Set<string>();
+        const queue: string[] = [localBranches.main];
+        const visited = new Set<string>();
+
+        console.log('[getGraph] Collecting main commits, starting from:', localBranches.main.substring(0, 7));
+
+        while (queue.length > 0) {
+          const currentHash = queue.shift()!;
+          if (visited.has(currentHash)) continue;
+          visited.add(currentHash);
+
+          const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+          if (!commit) {
+            console.log('[getGraph] Commit not found in allCommits:', currentHash.substring(0, 7));
+            continue;
+          }
+
+          console.log('[getGraph] Adding to mainCommits:', commit.shortHash, commit.message);
+          mainCommits.add(commit.hash);
+
+          // 모든 부모를 큐에 추가 (merge 커밋의 경우 여러 부모가 있을 수 있음)
+          commit.parents.forEach(parentHash => {
+            if (parentHash && !visited.has(parentHash)) {
+              queue.push(parentHash);
+            }
+          });
+        }
+
+        console.log('[getGraph] Total main commits collected:', mainCommits.size);
+
+        // 각 브랜치의 fork point 찾기
         for (const [branchName, headHash] of Object.entries(localBranches)) {
           if (branchName === 'main') continue;
 
-          try {
-            // merge-base로 공통 조상 찾기
-            const mergeBase = await git.raw([
-              'merge-base',
-              'main',
-              branchName
-            ]);
-            branchForkPoints[branchName] = mergeBase.trim();
-          } catch {
-            branchForkPoints[branchName] = null;
+          console.log(`[getGraph] Finding forkPoint for ${branchName}, HEAD:`, headHash.substring(0, 7));
+
+          // 브랜치 HEAD부터 역추적하여 main과 겹치는 첫 커밋 찾기
+          let branchHash: string | null = headHash;
+          const branchVisited = new Set<string>();
+          let forkPoint: string | null = null;
+
+          while (branchHash && !branchVisited.has(branchHash)) {
+            branchVisited.add(branchHash);
+            const commit = allCommits.find(c => c.hash === branchHash || c.hash.startsWith(branchHash as string));
+            if (!commit) {
+              console.log(`[getGraph] ${branchName}: Commit not found:`, branchHash.substring(0, 7));
+              break;
+            }
+
+            console.log(`[getGraph] ${branchName}: Checking commit ${commit.shortHash} (${commit.message}), in main:`, mainCommits.has(commit.hash));
+
+            // main에 있는 커밋이면 그것이 fork point
+            if (mainCommits.has(commit.hash)) {
+              forkPoint = commit.hash;
+              console.log(`[getGraph] ${branchName}: Found forkPoint:`, commit.shortHash, commit.message);
+              break;
+            }
+
+            branchHash = commit.parents[0] || null;
           }
+
+          branchForkPoints[branchName] = forkPoint;
+          console.log(`[getGraph] ${branchName}: Final forkPoint:`, forkPoint?.substring(0, 7) || 'null');
         }
       }
 
