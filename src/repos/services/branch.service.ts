@@ -232,10 +232,17 @@ export class BranchService extends BaseRepoService {
       console.log('[getGraph] Local branches:', Object.entries(localBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
       console.log('[getGraph] Remote branches:', Object.entries(remoteBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
 
-      // 모든 커밋 가져오기 (시간순 정렬)
+      // 현재 브랜치들에서 도달 가능한 커밋만 가져오기 (reflog 제외)
       const pretty = "%H|%P|%an|%ai|%s";
+
+      // 모든 로컬 + 리모트 브랜치 HEAD를 명시적으로 지정
+      const branchRefs = [
+        ...Object.keys(localBranches),
+        ...Object.keys(remoteBranches).map(b => `remotes/origin/${b}`)
+      ];
+
       const args: string[] = [
-        "--all",
+        ...branchRefs, // 브랜치 refs만 지정 (--all 대신)
         "--date-order", // 시간순 정렬 (병합 관계 유지)
         `--max-count=${max}`,
         `--pretty=${pretty}`,
