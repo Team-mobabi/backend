@@ -356,18 +356,20 @@ export class BranchService extends BaseRepoService {
       };
 
       const local = {
-        branches: buildBranchCommits(localBranches)
+        branches: buildBranchCommits(localBranches),
+        branchHeads: localBranches,  // 로컬 브랜치의 HEAD 커밋들
       };
 
       const remote = {
-        branches: buildBranchCommits(remoteBranches)
+        branches: buildBranchCommits(remoteBranches),
+        branchHeads: remoteBranches,  // 리모트 브랜치의 HEAD 커밋들
       };
 
       return {
         local,
         remote,
         currentBranch,
-        branchHeads: localBranches, // 각 브랜치의 HEAD 커밋
+        branchHeads: localBranches, // 하위 호환성을 위해 유지
         commits: enrichedCommits, // 전체 커밋 그래프 (브랜치 정보 포함)
         forkPoints: branchForkPoints, // 각 브랜치의 분기점
       };
