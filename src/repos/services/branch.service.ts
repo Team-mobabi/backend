@@ -31,6 +31,8 @@ export class BranchService extends BaseRepoService {
 
     try {
       const branchRes = await git.branchLocal();
+      const currentBranch = branchRes.current;
+
       const branches = await Promise.all(
         branchRes.all.map(async (branchName) => {
           const logRes = await git.log<DefaultLogFields>([
@@ -47,10 +49,11 @@ export class BranchService extends BaseRepoService {
           return {
             name: branchName,
             pushedCommits: commits,
+            isCurrent: branchName === currentBranch,
           };
         }),
       );
-      return { branches };
+      return { branches, currentBranch };
     } catch (err) {
       throw new InternalServerErrorException(
         `Failed to get branches: ${err.message}`,
@@ -68,7 +71,21 @@ export class BranchService extends BaseRepoService {
     try {
       const options = baseBranchName ? [baseBranchName] : [];
       await git.checkout(["-b", newBranchName, ...options]);
-      return { success: true, message: `Branch '${newBranchName}' created.` };
+
+      // 현재 브랜치 확인
+      const currentBranch = await git.revparse(["--abbrev-ref", "HEAD"]);
+
+      // 현재 커밋 해시
+      const currentCommit = await git.revparse(["HEAD"]);
+
+      return {
+        success: true,
+        message: `Branch '${newBranchName}' created.`,
+        branchName: newBranchName,
+        currentBranch: currentBranch.trim(),
+        currentCommit: currentCommit.trim(),
+        baseBranch: baseBranchName || null,
+      };
     } catch (err) {
       if (/already exists/i.test(err.message)) {
         throw new ConflictException(
@@ -196,6 +213,7 @@ export class BranchService extends BaseRepoService {
 
     try {
       const branchInfo = await git.branch(["-a"]);
+      const currentBranch = branchInfo.current;
       const localBranches: Record<string, string> = {};
       const remoteBranches: Record<string, string> = {};
 
@@ -211,10 +229,11 @@ export class BranchService extends BaseRepoService {
         }
       }
 
+      // 모든 커밋 가져오기 (시간순 정렬)
       const pretty = "%H|%P|%an|%ai|%s";
       const args: string[] = [
         "--all",
-        "--reverse",
+        "--date-order", // 시간순 정렬 (병합 관계 유지)
         `--max-count=${max}`,
         `--pretty=${pretty}`,
       ];
@@ -227,16 +246,82 @@ export class BranchService extends BaseRepoService {
         .filter(Boolean)
         .map((line) => {
           const [hash, parents, author, iso, msg] = line.split("|");
+          const parentsList = parents ? parents.split(" ") : [];
           return {
             hash,
-            parents: parents ? parents.split(" ") : [],
+            shortHash: hash.substring(0, 7),
+            parents: parentsList,
             author,
             committedAt: iso,
             message: msg,
+            isMerge: parentsList.length > 1, // 병합 커밋인지
           };
         });
 
-      // 각 브랜치별로 커밋 배열을 구성
+      // 각 커밋이 어느 브랜치에 속하는지 계산
+      const commitToBranches: Map<string, string[]> = new Map();
+
+      const markCommitsForBranch = (branchName: string, headHash: string) => {
+        const visited = new Set<string>();
+        let currentHash: string | null = headHash;
+
+        while (currentHash && !visited.has(currentHash)) {
+          visited.add(currentHash);
+
+          if (!commitToBranches.has(currentHash)) {
+            commitToBranches.set(currentHash, []);
+          }
+          commitToBranches.get(currentHash)?.push(branchName);
+
+          const commit = allCommits.find(c => c.hash.startsWith(currentHash as string));
+          if (!commit) break;
+
+          // 첫 번째 부모만 따라감 (메인 라인)
+          currentHash = commit.parents[0] || null;
+        }
+      };
+
+      // 각 브랜치별로 커밋 마킹
+      for (const [branchName, headHash] of Object.entries(localBranches)) {
+        markCommitsForBranch(branchName, headHash);
+      }
+
+      // 각 브랜치의 fork point 계산
+      const branchForkPoints: Record<string, string | null> = {};
+
+      if (localBranches.main) {
+        for (const [branchName, headHash] of Object.entries(localBranches)) {
+          if (branchName === 'main') continue;
+
+          try {
+            // merge-base로 공통 조상 찾기
+            const mergeBase = await git.raw([
+              'merge-base',
+              'main',
+              branchName
+            ]);
+            branchForkPoints[branchName] = mergeBase.trim();
+          } catch {
+            branchForkPoints[branchName] = null;
+          }
+        }
+      }
+
+      // 커밋에 브랜치 정보 추가
+      const enrichedCommits = allCommits.map(commit => {
+        const branches = commitToBranches.get(commit.hash) || [];
+        const isHead = Object.entries(localBranches).find(
+          ([_, hash]) => hash.startsWith(commit.hash)
+        );
+
+        return {
+          ...commit,
+          branches, // 이 커밋이 속한 브랜치들
+          isHead: isHead ? isHead[0] : null, // 브랜치 HEAD인지
+        };
+      });
+
+      // 각 브랜치별로 커밋 배열 구성 (기존 방식 유지)
       const buildBranchCommits = (branchHeads: Record<string, string>) => {
         const result: Record<string, any[]> = {};
         for (const [branchName, headHash] of Object.entries(branchHeads)) {
@@ -255,13 +340,13 @@ export class BranchService extends BaseRepoService {
               author: commit.author,
               committedAt: commit.committedAt,
               parents: commit.parents,
-              files: [] // 파일 정보는 필요시 추가
+              files: []
             });
 
             currentHash = commit.parents[0] || null;
           }
 
-          result[branchName] = commits.reverse(); // 오래된 커밋부터
+          result[branchName] = commits.reverse();
         }
         return result;
       };
@@ -274,7 +359,14 @@ export class BranchService extends BaseRepoService {
         branches: buildBranchCommits(remoteBranches)
       };
 
-      return { local, remote };
+      return {
+        local,
+        remote,
+        currentBranch,
+        branchHeads: localBranches, // 각 브랜치의 HEAD 커밋
+        commits: enrichedCommits, // 전체 커밋 그래프 (브랜치 정보 포함)
+        forkPoints: branchForkPoints, // 각 브랜치의 분기점
+      };
     } catch (err) {
       throw new InternalServerErrorException(
         `Failed to get commit graph: ${err.message}`,

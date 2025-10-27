@@ -475,7 +475,38 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Branches")
   @ApiOperation({ summary: "브랜치 목록 조회" })
-  @ApiResponse({ status: 200, description: "브랜치 목록 및 최근 커밋 반환" })
+  @ApiResponse({
+    status: 200,
+    description: "브랜치 목록 및 최근 커밋 반환",
+    schema: {
+      type: 'object',
+      properties: {
+        branches: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: 'main' },
+              pushedCommits: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    hash: { type: 'string', example: 'abc1234' },
+                    message: { type: 'string', example: 'Initial commit' },
+                    author: { type: 'string', example: '김개발' },
+                    committedAt: { type: 'string', example: '2025-10-27T...' }
+                  }
+                }
+              },
+              isCurrent: { type: 'boolean', example: false, description: '현재 체크아웃된 브랜치인지' }
+            }
+          }
+        },
+        currentBranch: { type: 'string', example: 'main', description: '현재 체크아웃된 브랜치 이름' }
+      }
+    }
+  })
   @Get(":repoId/branches")
   @HttpCode(HttpStatus.OK)
   async listBranches(
@@ -526,10 +557,51 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
   })
   @ApiResponse({
     status: 200,
-    description: "커밋 그래프가 성공적으로 반환됨",
+    description: "커밋 그래프가 성공적으로 반환됨 (현재 브랜치, 분기점, 전체 커밋 정보 포함)",
     schema: {
       type: 'object',
       properties: {
+        currentBranch: { type: 'string', example: 'feature', description: '현재 체크아웃된 브랜치' },
+        branchHeads: {
+          type: 'object',
+          additionalProperties: { type: 'string' },
+          example: { main: 'abc1234...', feature: 'def5678...' },
+          description: '각 브랜치의 최신 커밋 해시'
+        },
+        forkPoints: {
+          type: 'object',
+          additionalProperties: { type: 'string', nullable: true },
+          example: { feature: 'abc1234...' },
+          description: '각 브랜치가 main에서 갈라진 지점 (공통 조상)'
+        },
+        commits: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              hash: { type: 'string', example: 'abc1234...', description: '커밋 해시' },
+              shortHash: { type: 'string', example: 'abc1234', description: '짧은 커밋 해시' },
+              parents: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['parent123...'],
+                description: '부모 커밋 해시 배열'
+              },
+              author: { type: 'string', example: '김개발', description: '작성자' },
+              committedAt: { type: 'string', example: '2025-10-27...', description: '커밋 시간' },
+              message: { type: 'string', example: 'Initial commit', description: '커밋 메시지' },
+              isMerge: { type: 'boolean', example: false, description: '병합 커밋 여부 (parents가 2개 이상)' },
+              branches: {
+                type: 'array',
+                items: { type: 'string' },
+                example: ['main', 'feature'],
+                description: '이 커밋이 속한 브랜치들'
+              },
+              isHead: { type: 'string', nullable: true, example: 'main', description: '브랜치 HEAD인 경우 브랜치 이름' }
+            }
+          },
+          description: '전체 커밋 그래프 (브랜치 관계 포함)'
+        },
         local: {
           type: 'object',
           properties: {
@@ -649,7 +721,21 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 
   @ApiTags("Branches")
   @ApiOperation({ summary: "새 브랜치 생성" })
-  @ApiResponse({ status: 201, description: "브랜치가 성공적으로 생성됨" })
+  @ApiResponse({
+    status: 201,
+    description: "브랜치가 성공적으로 생성됨",
+    schema: {
+      type: 'object',
+      properties: {
+        success: { type: 'boolean', example: true },
+        message: { type: 'string', example: "Branch 'feature' created." },
+        branchName: { type: 'string', example: 'feature', description: '생성된 브랜치 이름' },
+        currentBranch: { type: 'string', example: 'feature', description: '현재 체크아웃된 브랜치' },
+        currentCommit: { type: 'string', example: 'abc1234...', description: '현재 커밋 해시' },
+        baseBranch: { type: 'string', example: 'main', nullable: true, description: '기준이 된 브랜치' }
+      }
+    }
+  })
   @Post(":repoId/branches")
   @HttpCode(HttpStatus.CREATED)
   async createBranch(
