@@ -258,37 +258,7 @@ export class BranchService extends BaseRepoService {
           };
         });
 
-      // 각 커밋이 어느 브랜치에 속하는지 계산
-      const commitToBranches: Map<string, string[]> = new Map();
-
-      const markCommitsForBranch = (branchName: string, headHash: string) => {
-        const visited = new Set<string>();
-        let currentHash: string | null = headHash;
-
-        while (currentHash && !visited.has(currentHash)) {
-          visited.add(currentHash);
-
-          // 전체 해시와 짧은 해시 모두 매핑
-          const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
-          if (!commit) break;
-
-          const fullHash = commit.hash;
-          if (!commitToBranches.has(fullHash)) {
-            commitToBranches.set(fullHash, []);
-          }
-          commitToBranches.get(fullHash)?.push(branchName);
-
-          // 첫 번째 부모만 따라감 (메인 라인)
-          currentHash = commit.parents[0] || null;
-        }
-      };
-
-      // 각 브랜치별로 커밋 마킹
-      for (const [branchName, headHash] of Object.entries(localBranches)) {
-        markCommitsForBranch(branchName, headHash);
-      }
-
-      // 각 브랜치의 fork point 계산
+      // 각 브랜치의 fork point 먼저 계산
       const branchForkPoints: Record<string, string | null> = {};
 
       if (localBranches.main) {
@@ -306,6 +276,64 @@ export class BranchService extends BaseRepoService {
           } catch {
             branchForkPoints[branchName] = null;
           }
+        }
+      }
+
+      // 각 커밋이 어느 브랜치에 속하는지 계산
+      const commitToBranches: Map<string, string[]> = new Map();
+
+      // main 브랜치 먼저 마킹 (모든 커밋 포함)
+      if (localBranches.main) {
+        const visited = new Set<string>();
+        let currentHash: string | null = localBranches.main;
+
+        while (currentHash && !visited.has(currentHash)) {
+          visited.add(currentHash);
+          const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+          if (!commit) break;
+
+          const fullHash = commit.hash;
+          if (!commitToBranches.has(fullHash)) {
+            commitToBranches.set(fullHash, []);
+          }
+          commitToBranches.get(fullHash)?.push('main');
+
+          currentHash = commit.parents[0] || null;
+        }
+      }
+
+      // 다른 브랜치는 fork point 이후 커밋만 마킹
+      for (const [branchName, headHash] of Object.entries(localBranches)) {
+        if (branchName === 'main') continue;
+
+        const forkPoint = branchForkPoints[branchName];
+        const visited = new Set<string>();
+        let currentHash: string | null = headHash;
+
+        while (currentHash && !visited.has(currentHash)) {
+          visited.add(currentHash);
+          const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+          if (!commit) break;
+
+          const fullHash = commit.hash;
+
+          // fork point에 도달하면 중단 (fork point는 main에 속함)
+          if (forkPoint && fullHash.startsWith(forkPoint)) {
+            // fork point도 이 브랜치에 속한다고 표시 (공통 조상)
+            if (!commitToBranches.has(fullHash)) {
+              commitToBranches.set(fullHash, []);
+            }
+            commitToBranches.get(fullHash)?.push(branchName);
+            break;
+          }
+
+          // 일반 커밋 마킹
+          if (!commitToBranches.has(fullHash)) {
+            commitToBranches.set(fullHash, []);
+          }
+          commitToBranches.get(fullHash)?.push(branchName);
+
+          currentHash = commit.parents[0] || null;
         }
       }
 
