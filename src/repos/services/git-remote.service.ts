@@ -164,6 +164,7 @@ export class GitRemoteService extends BaseRepoService {
     userId: string,
     remote = "origin",
     branch?: string,
+    force?: boolean,
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
@@ -224,7 +225,8 @@ export class GitRemoteService extends BaseRepoService {
       ahead = a;
     }
 
-    if (remoteExists && ahead === 0) {
+    // force push가 아니고, remote가 존재하며, ahead가 0이면 up-to-date
+    if (!force && remoteExists && ahead === 0) {
       return { success: true, upToDate: true, pushed: [] };
     }
 
@@ -235,10 +237,13 @@ export class GitRemoteService extends BaseRepoService {
         remote,
         targetBranch,
         ahead,
-        note: '🚀 실제로 Push를 수행합니다'
+        force,
+        note: force ? '⚠️ Force Push 수행' : '🚀 실제로 Push를 수행합니다'
       });
 
-      const res = await git.push(remote, targetBranch);
+      // Force push 옵션 추가
+      const pushOptions = force ? ['--force'] : [];
+      const res = await git.push(remote, targetBranch, pushOptions);
 
       console.log('[GitRemote] Push 성공:', {
         repoId,

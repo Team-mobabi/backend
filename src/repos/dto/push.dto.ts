@@ -1,4 +1,4 @@
-import { IsString, IsOptional, Length } from "class-validator";
+import { IsString, IsOptional, Length, IsBoolean } from "class-validator";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 export class PushDto {
@@ -24,4 +24,13 @@ export class PushDto {
   @IsOptional()
   @Length(1, 100)
   branch?: string;
+
+  @ApiPropertyOptional({
+    description: "강제 푸시 여부 (원격 커밋 덮어쓰기)",
+    example: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  force?: boolean;
 }

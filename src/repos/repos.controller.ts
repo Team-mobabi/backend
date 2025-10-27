@@ -470,6 +470,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
       user.id,
       pushDto.remote,
       pushDto.branch,
+      pushDto.force,
     );
   }
 
