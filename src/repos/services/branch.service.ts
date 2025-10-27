@@ -350,7 +350,7 @@ export class BranchService extends BaseRepoService {
             currentHash = commit.parents[0] || null;
           }
 
-          result[branchName] = commits.reverse();
+          result[branchName] = commits;  // reverse 제거 - 최신 커밋이 먼저 (HEAD부터 시작)
         }
         return result;
       };
