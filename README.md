@@ -52,6 +52,14 @@ A modern Git repository management system built with NestJS, featuring user auth
 
 ## 🏗 System Architecture
 
+> 💡 **Interactive Diagrams Available!**
+> - **Simple Version**: [`docs/architecture-simple.drawio`](./docs/architecture-simple.drawio) - Clean overview (recommended for presentations)
+> - **Detailed Version**: [`docs/system-architecture.drawio`](./docs/system-architecture.drawio) - Full architecture with all layers
+>
+> Open these files in [draw.io](https://app.diagrams.net/) to view and edit beautiful, interactive diagrams!
+
+### High-Level Overview
+
 ```mermaid
 graph TB
     User[👤 User/Client]

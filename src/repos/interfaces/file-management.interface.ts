@@ -53,6 +53,9 @@ export interface UploadResult {
   success: true;
   uploadedFiles: UploadedFileInfo[];
   uploadPath: string;
+  ignoredFiles?: string[];
+  ignoredCount?: number;
+  message?: string;
 }
 
 export interface FileOperationResult {

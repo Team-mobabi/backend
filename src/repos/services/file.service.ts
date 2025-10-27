@@ -11,6 +11,7 @@ import { Repo } from "@src/repos/entities/repo.entity";
 import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+import ignore from "ignore";
 import {
   FileItem,
   FolderItem,
@@ -248,6 +249,25 @@ export class FileService extends BaseRepoService {
     }
   }
 
+  /**
+   * .gitignore 파일을 읽고 ignore 인스턴스 생성
+   */
+  private async loadGitignore(repoPath: string): Promise<ReturnType<typeof ignore> | null> {
+    try {
+      const gitignorePath = path.join(repoPath, '.gitignore');
+      const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
+      const ig = ignore();
+      ig.add(gitignoreContent);
+      return ig;
+    } catch (err) {
+      // .gitignore 파일이 없으면 null 반환
+      if (err.code === 'ENOENT') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
   async uploadFiles(
     repoId: string,
     userId: string,
@@ -262,12 +282,29 @@ export class FileService extends BaseRepoService {
 
     const { repo } = await this.getRepoAndGit(repoId, userId);
 
+    // .gitignore 로드
+    const ig = await this.loadGitignore(repo.gitPath);
+
+    // .gitignore 패턴에 매칭되는 파일 필터링
+    const filteredFiles: Express.Multer.File[] = [];
+    const ignoredFiles: string[] = [];
+
+    for (const file of files) {
+      const relativeFilePath = path.join(uploadPath, file.originalname).replace(/\\/g, "/");
+
+      if (ig && ig.ignores(relativeFilePath)) {
+        ignoredFiles.push(file.originalname);
+      } else {
+        filteredFiles.push(file);
+      }
+    }
+
     const targetDir = path.join(repo.gitPath, uploadPath);
     await this.ensureDirectoryExists(targetDir);
 
     const uploadedFiles: UploadedFileInfo[] = [];
 
-    for (const file of files) {
+    for (const file of filteredFiles) {
       const targetFilePath = path.join(targetDir, file.originalname);
 
       if (!overwrite) {
@@ -296,6 +333,11 @@ export class FileService extends BaseRepoService {
       success: true,
       uploadedFiles,
       uploadPath,
+      ...(ignoredFiles.length > 0 && {
+        ignoredFiles,
+        ignoredCount: ignoredFiles.length,
+        message: `${uploadedFiles.length}개 파일 업로드 완료, ${ignoredFiles.length}개 파일 제외(.gitignore)`
+      }),
     };
   }
 }

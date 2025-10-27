@@ -1,7 +1,8 @@
 import { Repository, Like } from "typeorm";
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "@src/users/entities/user.entity";
+import * as bcrypt from "bcrypt";
 
 @Injectable()
 export class UsersService {
@@ -31,5 +32,48 @@ export class UsersService {
       where: { email: Like(`%${query}%`) },
       take: 10, // 최대 10명까지
     });
+  }
+
+  async updatePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ message: string }> {
+    const user = await this.findUserById(userId);
+
+    if (!user) {
+      throw new NotFoundException("사용자를 찾을 수 없습니다.");
+    }
+
+    // 현재 비밀번호 확인
+    const isPasswordMatch = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isPasswordMatch) {
+      throw new UnauthorizedException("현재 비밀번호가 일치하지 않습니다.");
+    }
+
+    // 새 비밀번호 해싱
+    const salt = await bcrypt.genSalt();
+    const newPasswordHash = await bcrypt.hash(newPassword, salt);
+
+    // 비밀번호 업데이트
+    await this.usersRepository.update(userId, { passwordHash: newPasswordHash });
+
+    return { message: "비밀번호가 성공적으로 변경되었습니다." };
+  }
+
+  async deleteUser(userId: string): Promise<{ message: string }> {
+    const user = await this.findUserById(userId);
+
+    if (!user) {
+      throw new NotFoundException("사용자를 찾을 수 없습니다.");
+    }
+
+    await this.usersRepository.delete(userId);
+
+    return { message: "회원 탈퇴가 완료되었습니다." };
   }
 }

@@ -930,7 +930,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/files" \\
   -F "overwrite=false"
 \`\`\`
 
-📤 **여러 파일 동시 업로드 (최대 10개)**
+📤 **여러 파일 동시 업로드 (최대 100개)**
 \`\`\`bash
 curl -X POST "http://localhost:6101/repos/:repoId/files" \\
   -H "Authorization: Bearer YOUR_TOKEN" \\
@@ -966,8 +966,9 @@ fetch('/repos/:repoId/files', {
 \`\`\`
 
 **제한:**
-- 최대 10개 파일 동시 업로드
+- 최대 100개 파일 동시 업로드
 - 각 파일 최대 10MB
+- .gitignore 패턴에 매칭되는 파일은 자동 제외
 - 모든 파일 형식 지원 (이미지, PDF, ZIP 등)
 `
   })
@@ -1015,7 +1016,7 @@ fetch('/repos/:repoId/files', {
             files: {
               type: 'array',
               items: { type: 'string', format: 'binary' },
-              description: '업로드할 파일들 (최대 10개, 각 10MB 제한)',
+              description: '업로드할 파일들 (최대 100개, 각 10MB 제한)',
             },
             path: { type: 'string', example: 'uploads', description: '업로드 경로 (선택사항)' },
             overwrite: { type: 'boolean', example: false, description: '덮어쓰기 허용 여부' },
@@ -1027,7 +1028,7 @@ fetch('/repos/:repoId/files', {
   })
   @Post(":repoId/files")
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FilesInterceptor('files', 10, {
+  @UseInterceptors(FilesInterceptor('files', 100, {
     limits: { fileSize: 10 * 1024 * 1024 } // 10MB 제한
   }))
   async createOrUploadFile(

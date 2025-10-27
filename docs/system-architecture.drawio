@@ -1,0 +1,204 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36" version="28.2.8">
+  <diagram name="System Architecture" id="system-architecture">
+    <mxGraphModel dx="2066" dy="1126" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="arrow18" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#336791;" parent="1" source="email-entity" target="postgres" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="615" y="980" />
+              <mxPoint x="280" y="980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="client-bg" value="Client Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="40" width="1440" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="user" value="👤 User" style="shape=actor;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="200" y="70" width="60" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend" value="React Frontend&lt;br&gt;(Vite)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#61dafb;strokeColor=#0e7490;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="320" y="70" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow1" value="HTTP/HTTPS" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeWidth=2;" parent="1" source="user" target="frontend" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="gateway-bg" value="API Gateway Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="200" width="1440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="nestjs" value="NestJS Application&lt;br&gt;(main.ts)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0234e;strokeColor=#b31a3d;fontColor=#ffffff;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="200" y="240" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="swagger" value="Swagger/OpenAPI&lt;br&gt;API Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;fontSize=11;" parent="1" vertex="1">
+          <mxGeometry x="400" y="240" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" value="REST API + JWT" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeWidth=2;strokeColor=#0e7490;" parent="1" source="frontend" target="nestjs" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="controller-bg" value="Controller Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="380" width="1440" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="auth-ctrl" value="AuthController&lt;br&gt;/auth/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="120" y="420" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="user-ctrl" value="UsersController&lt;br&gt;/users/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="270" y="420" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="repo-ctrl" value="ReposController&lt;br&gt;/repos/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="420" y="420" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="email-ctrl" value="EmailController&lt;br&gt;/email/*" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="570" y="420" width="130" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=1;" parent="1" source="nestjs" target="auth-ctrl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=1;" parent="1" source="nestjs" target="user-ctrl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=1;" parent="1" source="nestjs" target="repo-ctrl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;strokeWidth=1;" parent="1" source="nestjs" target="email-ctrl" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="service-bg" value="Service Layer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="540" width="1440" height="260" as="geometry" />
+        </mxCell>
+        <mxCell id="auth-svc" value="AuthService&lt;br&gt;JWT Auth" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="120" y="580" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="user-svc" value="UsersService&lt;br&gt;User Mgmt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="250" y="580" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="repo-svc" value="ReposService&lt;br&gt;Repo Mgmt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="380" y="580" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="email-svc" value="EmailService&lt;br&gt;SMTP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="510" y="580" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="git-services-bg" value="Git Services" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;align=left;verticalAlign=top;fontSize=12;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="640" y="565" width="860" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="git-remote" value="GitRemoteService&lt;br&gt;push, pull" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="660" y="595" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="git-op" value="GitOperationService&lt;br&gt;add, commit, reset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="800" y="595" width="130" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="branch-svc" value="BranchService&lt;br&gt;branch ops" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="950" y="595" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="pr-svc" value="PRService&lt;br&gt;Pull Requests" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1090" y="595" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="file-svc" value="FileService&lt;br&gt;file operations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="660" y="660" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="conflict-svc" value="ConflictService&lt;br&gt;conflict resolution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="800" y="660" width="130" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="ai-svc" value="AIConflictResolver&lt;br&gt;Claude AI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="950" y="660" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="diff-svc" value="DiffService&lt;br&gt;diff operations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1090" y="660" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="git-graph-svc" value="GraphService&lt;br&gt;commit graph" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="1230" y="595" width="120" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" parent="1" source="auth-ctrl" target="auth-svc" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" parent="1" source="user-ctrl" target="user-svc" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" parent="1" source="repo-ctrl" target="repo-svc" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;" parent="1" source="email-ctrl" target="email-svc" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="data-bg" value="Data Access Layer (TypeORM)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="840" width="620" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="user-entity" value="User" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="120" y="890" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="repo-entity" value="Repo" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="230" y="890" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pr-entity" value="PullRequest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="340" y="890" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="review-entity" value="PrReview" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="450" y="890" width="90" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="email-entity" value="EmailVerification" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="560" y="890" width="110" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" parent="1" source="auth-svc" target="user-entity" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" parent="1" source="user-svc" target="user-entity" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow13" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" parent="1" source="repo-svc" target="repo-entity" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=1;dashed=1;" parent="1" source="email-svc" target="email-entity" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="external-bg" value="External Services &amp; Storage" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;verticalAlign=top;fontSize=14;fontStyle=1;opacity=30;" parent="1" vertex="1">
+          <mxGeometry x="80" y="1000" width="1440" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="PostgreSQL&lt;br&gt;Database" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#336791;strokeColor=#23415c;fontColor=#ffffff;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="220" y="1030" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="git-storage" value="Git File System&lt;br&gt;Local Storage" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#f05032;strokeColor=#c83c1e;fontColor=#ffffff;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="860" y="1030" width="130" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="smtp" value="📧 SMTP Server&lt;br&gt;Email Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffa500;strokeColor=#d67300;fontColor=#ffffff;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="500" y="1040" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="claude" value="🤖 Claude AI&lt;br&gt;Conflict Resolution" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d97757;strokeColor=#b85c3d;fontColor=#ffffff;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+          <mxGeometry x="1040" y="1040" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow15" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#336791;" parent="1" source="user-entity" target="postgres" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="165" y="980" />
+              <mxPoint x="280" y="980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow16" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#336791;" parent="1" source="repo-entity" target="postgres" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="275" y="980" />
+              <mxPoint x="280" y="980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow17" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#336791;" parent="1" source="pr-entity" target="postgres" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="385" y="980" />
+              <mxPoint x="280" y="980" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="arrow19" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#f05032;entryX=0.5;entryY=0;entryDx=0;entryDy=0;entryPerimeter=0;" parent="1" source="git-services-bg" target="git-storage" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow20" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#ffa500;" parent="1" source="email-svc" target="smtp" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow21" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeWidth=2;strokeColor=#d97757;" parent="1" source="ai-svc" target="claude" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
