@@ -274,10 +274,21 @@ export class FileService extends BaseRepoService {
     files: Express.Multer.File[],
     uploadPath = "",
     overwrite = false,
+    paths?: string[],
   ): Promise<UploadResult> {
+    console.log('[FileService] uploadFiles 호출:', {
+      filesCount: files.length,
+      uploadPath,
+      overwrite,
+      paths,
+      fileOriginalNames: files.map(f => f.originalname)
+    });
+
     // 모든 파일명 검증 (업로드 시작 전에 미리 검증)
-    for (const file of files) {
-      this.validateFilename(file.originalname);
+    for (let i = 0; i < files.length; i++) {
+      const filePathToValidate = paths && paths[i] ? paths[i] : files[i].originalname;
+      console.log(`[FileService] 파일 ${i}: originalname=${files[i].originalname}, path=${paths?.[i]}, using=${filePathToValidate}`);
+      this.validateFilename(filePathToValidate);
     }
 
     const { repo } = await this.getRepoAndGit(repoId, userId);
@@ -286,16 +297,19 @@ export class FileService extends BaseRepoService {
     const ig = await this.loadGitignore(repo.gitPath);
 
     // .gitignore 패턴에 매칭되는 파일 필터링
-    const filteredFiles: Express.Multer.File[] = [];
+    const filteredFiles: Array<{ file: Express.Multer.File; relativePath: string }> = [];
     const ignoredFiles: string[] = [];
 
-    for (const file of files) {
-      const relativeFilePath = path.join(uploadPath, file.originalname).replace(/\\/g, "/");
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // paths 배열이 있으면 사용, 없으면 file.originalname 사용
+      const relativePath = paths && paths[i] ? paths[i] : file.originalname;
+      const relativeFilePath = path.join(uploadPath, relativePath).replace(/\\/g, "/");
 
       if (ig && ig.ignores(relativeFilePath)) {
-        ignoredFiles.push(file.originalname);
+        ignoredFiles.push(relativePath);
       } else {
-        filteredFiles.push(file);
+        filteredFiles.push({ file, relativePath });
       }
     }
 
@@ -304,10 +318,10 @@ export class FileService extends BaseRepoService {
 
     const uploadedFiles: UploadedFileInfo[] = [];
 
-    for (const file of filteredFiles) {
-      // file.originalname에서 경로와 파일명 분리 (폴더 구조 유지)
-      const fileDir = path.dirname(file.originalname);
-      const fileName = path.basename(file.originalname);
+    for (const { file, relativePath } of filteredFiles) {
+      // relativePath에서 경로와 파일명 분리 (폴더 구조 유지)
+      const fileDir = path.dirname(relativePath);
+      const fileName = path.basename(relativePath);
 
       // 중간 디렉토리까지 포함한 전체 경로 생성
       const fullTargetDir = path.join(targetDir, fileDir);
@@ -318,7 +332,7 @@ export class FileService extends BaseRepoService {
       if (!overwrite) {
         try {
           await fs.access(targetFilePath);
-          throw new FileAlreadyExistsException(file.originalname);
+          throw new FileAlreadyExistsException(relativePath);
         } catch (err) {
           if (err.code !== "ENOENT") throw err;
         }
@@ -328,9 +342,9 @@ export class FileService extends BaseRepoService {
 
       const stats = await fs.stat(targetFilePath);
       uploadedFiles.push({
-        originalname: file.originalname,
-        filename: file.originalname,
-        path: path.join(uploadPath, file.originalname).replace(/\\/g, "/"),
+        originalname: relativePath,
+        filename: relativePath,
+        path: path.join(uploadPath, relativePath).replace(/\\/g, "/"),
         size: stats.size,
         mimetype: file.mimetype,
         modifiedAt: stats.mtime,

@@ -1129,12 +1129,19 @@ fetch('/repos/:repoId/files', {
         ? (Boolean(body?.overwrite) || String(body?.overwrite) === 'true')
         : true; // 기본값을 true로 변경
 
+      // paths 필드 받기 (배열 또는 단일 값)
+      let paths: string[] = [];
+      if (body?.paths) {
+        paths = Array.isArray(body.paths) ? body.paths : [body.paths];
+      }
+
       return this.fileService.uploadFiles(
         repoId,
         user.id,
         files,
         uploadPath,
         overwrite,
+        paths,
       );
     }
 
