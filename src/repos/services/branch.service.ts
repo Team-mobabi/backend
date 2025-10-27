@@ -313,15 +313,22 @@ export class BranchService extends BaseRepoService {
       const enrichedCommits = allCommits.map(commit => {
         const branches = commitToBranches.get(commit.hash) || [];
 
-        // isHead 계산: 전체 해시와 짧은 해시 모두 확인
-        const isHead = Object.entries(localBranches).find(
+        // isHead 계산: 이 커밋을 가리키는 모든 브랜치 찾기
+        const headsPointingHere = Object.entries(localBranches).filter(
           ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
         );
+
+        // 여러 브랜치가 같은 커밋을 가리킬 때: main 우선, 그 다음 사전순
+        let headBranch = null;
+        if (headsPointingHere.length > 0) {
+          const mainHead = headsPointingHere.find(([name, _]) => name === 'main');
+          headBranch = mainHead ? mainHead[0] : headsPointingHere[0][0];
+        }
 
         return {
           ...commit,
           branches, // 이 커밋이 속한 브랜치들
-          isHead: isHead ? isHead[0] : null, // 브랜치 HEAD인지
+          isHead: headBranch, // 브랜치 HEAD인지 (main 우선)
         };
       });
 
