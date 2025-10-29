@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
 import {
   FileNotFoundException,
   FileAlreadyExistsException,
@@ -226,6 +226,10 @@ export class FileService extends BaseRepoService {
     userId: string,
     filePath: string,
   ): Promise<FileDeleteResult> {
+    if (!filePath) {
+      throw new HttpException("파일 경로가 필요합니다.", HttpStatus.BAD_REQUEST);
+    }
+
     const { repo, git } = await this.getRepoAndGit(repoId, userId);
 
     const fullPath = path.join(repo.gitPath, filePath);
