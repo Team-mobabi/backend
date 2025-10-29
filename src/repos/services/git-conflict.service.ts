@@ -342,7 +342,7 @@ export class GitConflictService extends BaseRepoService {
     resolution: "ours" | "theirs" | "manual",
     manualContent?: string,
   ): Promise<{ success: boolean; message: string }> {
-    const { git, repo } = await this.getRepoAndGit(repoId, userId);
+    const { git, repoPath } = await this.getRepoAndGit(repoId, userId);
 
     try {
       if (resolution === "ours") {
@@ -357,7 +357,7 @@ export class GitConflictService extends BaseRepoService {
         // 수동으로 해결한 내용 저장
         const fs = await import("fs/promises");
         const path = await import("path");
-        const fullPath = path.join(repo.gitPath, filePath);
+        const fullPath = path.join(repoPath, filePath);
         await fs.writeFile(fullPath, manualContent, "utf8");
         await git.add(filePath);
       }

@@ -56,11 +56,11 @@ export class Repo {
   isPrivate: boolean;
 
   @ApiProperty({
-    description: "Git 저장소 경로",
+    description: "Git 저장소 경로 (deprecated, 사용자별로 동적 계산됨)",
     example: "/path/to/repo",
   })
-  @Column({ length: 255, default: "" })
-  gitPath: string;
+  @Column({ length: 255, nullable: true })
+  gitPath?: string;
 
   @ApiProperty({
     description: "Fork 출처 레포지토리 ID",

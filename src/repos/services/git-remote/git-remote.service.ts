@@ -26,7 +26,6 @@ export class GitRemoteService extends BaseRepoService {
   private readonly logger = new Logger(GitRemoteService.name);
   private readonly pullHandler = new PullHandler();
   private readonly pushHandler = new PushHandler();
-  private readonly remoteBasePath: string;
 
   constructor(
     @InjectRepository(Repo)
@@ -36,9 +35,6 @@ export class GitRemoteService extends BaseRepoService {
     configService: ConfigService,
   ) {
     super(repoRepository, collaboratorRepository, configService);
-    const env = this.configService.get<string>("ENV", "dev");
-    const pathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
-    this.remoteBasePath = this.configService.get<string>(pathKey, "data/remote");
   }
 
   async pullRepo(

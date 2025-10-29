@@ -59,7 +59,7 @@ export class GitOperationService extends BaseRepoService {
   }
 
   async addFiles(repoId: string, userId: string, files?: string[]) {
-    const { repo, git } = await this.getRepoAndGit(repoId, userId);
+    const { repoPath, git } = await this.getRepoAndGit(repoId, userId);
 
     if (!files || files.length === 0) {
       try {
@@ -75,7 +75,7 @@ export class GitOperationService extends BaseRepoService {
     const validFiles: string[] = [];
 
     for (const file of files) {
-      const filePath = path.join(repo.gitPath, file);
+      const filePath = path.join(repoPath, file);
       try {
         await fs.access(filePath);
         validFiles.push(file);

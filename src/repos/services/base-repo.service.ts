@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
+import * as path from "node:path";
 import simpleGit, { SimpleGit } from "simple-git";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { RepoCollaborator, CollaboratorRole } from "@src/repos/entities/repo-collaborator.entity";
@@ -15,6 +16,7 @@ import {
 @Injectable()
 export abstract class BaseRepoService {
   protected readonly repoBasePath: string;
+  protected readonly remoteBasePath: string;
 
   constructor(
     @InjectRepository(Repo)
@@ -25,14 +27,17 @@ export abstract class BaseRepoService {
   ) {
     const env = this.configService.get<string>("ENV", "dev");
     const pathKey = env === "prod" ? "REPO_BASE_PATH" : "REPO_LOCAL_BASE_PATH";
-    this.repoBasePath = this.configService.get<string>(pathKey, "data/git");
+    this.repoBasePath = this.configService.get<string>(pathKey, "data/repos");
+
+    const remotePathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
+    this.remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
   }
 
   protected async getRepoAndGit(
     repoId: string,
     userId: string,
     requiredRole: CollaboratorRole = CollaboratorRole.READ,
-  ): Promise<{ repo: Repo; git: SimpleGit }> {
+  ): Promise<{ repo: Repo; git: SimpleGit; repoPath: string }> {
     const repo = await this.repoRepository.findOne({ where: { repoId } });
     if (!repo) {
       throw new RepoNotFoundException(repoId);
@@ -52,13 +57,22 @@ export abstract class BaseRepoService {
       }
     }
 
-    if (!repo.gitPath) {
-      throw new RepoPathNotConfiguredException(repoId);
+    const userRepoPath = path.join(this.repoBasePath, userId, repoId);
+    const remotePath = path.join(this.remoteBasePath, `${repoId}.git`);
+
+    try {
+      await fs.access(userRepoPath);
+    } catch {
+      await this.ensureDirectoryExists(path.dirname(userRepoPath));
+      const git = simpleGit();
+      await git.clone(remotePath, userRepoPath);
+
+      const userGit = simpleGit(userRepoPath);
+      await userGit.addConfig("commit.gpgsign", "false");
     }
 
-    await this.ensureDirectoryExists(repo.gitPath);
-    const git = simpleGit(repo.gitPath);
-    return { repo, git };
+    const git = simpleGit(userRepoPath);
+    return { repo, git, repoPath: userRepoPath };
   }
 
   private hasRequiredRole(
