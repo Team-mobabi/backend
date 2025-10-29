@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { Repo } from "./repo.entity";
+import { User } from "@src/users/entities/user.entity";
 
 export enum CollaboratorRole {
   READ = "read",
@@ -59,6 +60,14 @@ export class RepoCollaborator {
   @ManyToOne(() => Repo, { onDelete: "CASCADE" })
   @JoinColumn({ name: "repoId" })
   repo: Repo;
+
+  @ApiProperty({
+    description: "협업자 User 정보",
+    type: () => User,
+  })
+  @ManyToOne(() => User, { eager: false })
+  @JoinColumn({ name: "userId" })
+  user?: User;
 
   @ApiProperty({
     description: "협업자 추가일",

@@ -87,7 +87,7 @@ export class ReposController {
   @Get()
   @HttpCode(HttpStatus.OK)
   async getMyRepos(@AuthUser() user: User): Promise<RepoResponseDto[]> {
-    return this.reposService.findReposByOwner(user.id);
+    return this.reposService.findReposByUserAccess(user.id);
   }
 
   @Public()

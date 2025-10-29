@@ -50,10 +50,25 @@ export class CollaboratorService extends BaseRepoService {
   async getCollaborators(repoId: string, userId: string) {
     await this.getRepoAndGit(repoId, userId, CollaboratorRole.READ);
 
-    return this.collaboratorRepository.find({
-      where: { repoId },
-      order: { addedAt: "DESC" },
-    });
+    const collaborators = await this.collaboratorRepository
+      .createQueryBuilder("collaborator")
+      .leftJoinAndSelect("collaborator.user", "user")
+      .where("collaborator.repoId = :repoId", { repoId })
+      .orderBy("collaborator.addedAt", "DESC")
+      .getMany();
+
+    // User 정보를 포함한 응답 형태로 변환
+    return collaborators.map(c => ({
+      id: c.id,
+      repoId: c.repoId,
+      userId: c.userId,
+      role: c.role,
+      addedAt: c.addedAt,
+      user: c.user ? {
+        id: c.user.id,
+        email: c.user.email,
+      } : null,
+    }));
   }
 
   async updateCollaborator(

@@ -80,6 +80,33 @@ export class ReposService extends BaseRepoService {
     return repos.map(repo => this.toRepoResponseDto(repo));
   }
 
+  async findReposByUserAccess(userId: string): Promise<RepoResponseDto[]> {
+    const ownedRepos = await this.repoRepository.find({
+      where: { ownerId: userId },
+      relations: ["owner"],
+    });
+
+    const collaborations = await this.collaboratorRepository.find({
+      where: { userId },
+      relations: ["repo", "repo.owner"],
+    });
+
+    const collaboratorRepos = collaborations.map(c => c.repo);
+
+    const allRepos = [...ownedRepos];
+    const ownedRepoIds = new Set(ownedRepos.map(r => r.repoId));
+
+    for (const repo of collaboratorRepos) {
+      if (!ownedRepoIds.has(repo.repoId)) {
+        allRepos.push(repo);
+      }
+    }
+
+    allRepos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    return allRepos.map(repo => this.toRepoResponseDto(repo));
+  }
+
   private toRepoResponseDto(repo: Repo): RepoResponseDto {
     const dto: RepoResponseDto = {
       repoId: repo.repoId,
@@ -156,41 +183,33 @@ export class ReposService extends BaseRepoService {
       const remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
       const forkedRemotePath = path.join(remoteBasePath, `${savedRepo.repoId}.git`);
 
-      // 1. 먼저 bare repository에 mirror clone (모든 브랜치 복사)
       await this.ensureDirectoryExists(path.dirname(forkedRemotePath));
       const git = simpleGit();
       await git.clone(sourceRepo.gitPath, forkedRemotePath, ['--mirror']);
 
-      // 2. bare repository에서 working directory clone
       await this.ensureDirectoryExists(path.dirname(savedRepo.gitPath));
       await git.clone(forkedRemotePath, savedRepo.gitPath);
 
-      // 3. gpgsign 설정
       const forkedGit = simpleGit(savedRepo.gitPath);
       await forkedGit.addConfig("commit.gpgsign", "false");
 
-      // 4. 모든 remote 브랜치를 local 브랜치로 생성 (초보자를 위한 시각화)
       const branches = await forkedGit.branch(['-r']);
       const currentBranch = (await forkedGit.revparse(['--abbrev-ref', 'HEAD'])).trim();
 
       for (const remoteBranch of Object.keys(branches.branches)) {
-        // origin/HEAD -> origin/main 같은 심볼릭 링크 제외
         if (remoteBranch.includes('origin/') && !remoteBranch.includes('HEAD')) {
           const localBranchName = remoteBranch.replace('origin/', '');
 
-          // 이미 체크아웃된 브랜치는 건너뛰기
           if (localBranchName !== currentBranch) {
             try {
               await forkedGit.checkout(['-b', localBranchName, remoteBranch]);
             } catch (err) {
-              // 브랜치 생성 실패해도 계속 진행
               console.warn(`Failed to create local branch ${localBranchName}: ${err.message}`);
             }
           }
         }
       }
 
-      // 5. 다시 기본 브랜치로 돌아가기
       await forkedGit.checkout(currentBranch);
 
       const repo = await this.repoRepository.save(savedRepo);

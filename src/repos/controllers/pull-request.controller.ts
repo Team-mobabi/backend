@@ -56,10 +56,13 @@ export class PullRequestController {
     );
   }
 
-  @ApiOperation({ summary: "Pull Request 목록 조회" })
+  @ApiOperation({
+    summary: "Pull Request 목록 조회",
+    description: "협업자/소유자는 레포지토리의 모든 PR을 조회할 수 있습니다"
+  })
   @ApiResponse({
     status: 200,
-    description: "Pull Request 목록 반환",
+    description: "Pull Request 목록 반환 (협업자/소유자 권한 필요)",
     type: [PullRequest],
   })
   @Get(":repoId/pull-requests")
