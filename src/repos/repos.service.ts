@@ -169,6 +169,30 @@ export class ReposService extends BaseRepoService {
       const forkedGit = simpleGit(savedRepo.gitPath);
       await forkedGit.addConfig("commit.gpgsign", "false");
 
+      // 4. 모든 remote 브랜치를 local 브랜치로 생성 (초보자를 위한 시각화)
+      const branches = await forkedGit.branch(['-r']);
+      const currentBranch = (await forkedGit.revparse(['--abbrev-ref', 'HEAD'])).trim();
+
+      for (const remoteBranch of Object.keys(branches.branches)) {
+        // origin/HEAD -> origin/main 같은 심볼릭 링크 제외
+        if (remoteBranch.includes('origin/') && !remoteBranch.includes('HEAD')) {
+          const localBranchName = remoteBranch.replace('origin/', '');
+
+          // 이미 체크아웃된 브랜치는 건너뛰기
+          if (localBranchName !== currentBranch) {
+            try {
+              await forkedGit.checkout(['-b', localBranchName, remoteBranch]);
+            } catch (err) {
+              // 브랜치 생성 실패해도 계속 진행
+              console.warn(`Failed to create local branch ${localBranchName}: ${err.message}`);
+            }
+          }
+        }
+      }
+
+      // 5. 다시 기본 브랜치로 돌아가기
+      await forkedGit.checkout(currentBranch);
+
       const repo = await this.repoRepository.save(savedRepo);
 
       const repoWithOwner = await this.repoRepository.findOne({
