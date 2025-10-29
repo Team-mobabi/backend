@@ -22,18 +22,19 @@ export class AuthService {
       throw new ConflictException("이미 사용 중인 이메일입니다.");
     }
 
-    const isVerified = await this.emailService.isEmailVerified(email);
-    if (!isVerified) {
-      throw new BadRequestException(
-        "이메일 인증이 필요합니다. 먼저 이메일 인증을 완료해주세요.",
-      );
-    }
+    // 임시로 이메일 인증 비활성화
+    // const isVerified = await this.emailService.isEmailVerified(email);
+    // if (!isVerified) {
+    //   throw new BadRequestException(
+    //     "이메일 인증이 필요합니다. 먼저 이메일 인증을 완료해주세요.",
+    //   );
+    // }
 
     const salt = await bcrypt.genSalt();
     const passwordHash = await bcrypt.hash(password, salt);
 
     await this.usersService.createUser({ email, passwordHash });
-    await this.emailService.clearVerifiedEmail(email);
+    // await this.emailService.clearVerifiedEmail(email); // 인증 비활성화 시 불필요
 
     return { message: "회원가입이 완료되었습니다." };
   }
