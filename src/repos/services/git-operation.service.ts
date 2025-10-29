@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
@@ -12,6 +12,8 @@ import { ResetMode } from "@src/repos/dto/reset.dto";
 
 @Injectable()
 export class GitOperationService extends BaseRepoService {
+  private readonly logger = new Logger(GitOperationService.name);
+
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
@@ -26,7 +28,6 @@ export class GitOperationService extends BaseRepoService {
     try {
       const st = await git.status();
 
-      // 변경사항 목록
       const changes = [
         ...st.modified.map((f) => ({ name: f, status: "modified" })),
         ...st.not_added.map((f) => ({ name: f, status: "untracked" })),
@@ -35,13 +36,11 @@ export class GitOperationService extends BaseRepoService {
         ...st.renamed.map((r) => ({ name: r.to, status: "renamed" })),
       ];
 
-      // 전체 파일 목록 (커밋된 파일 포함) - git ls-files 사용
       let allFiles: string[] = [];
       try {
         const filesOutput = await git.raw(["ls-files"]);
         allFiles = filesOutput.trim().split("\n").filter(Boolean);
       } catch {
-        // 파일이 없거나 에러가 나면 빈 배열
         allFiles = [];
       }
 
@@ -59,7 +58,6 @@ export class GitOperationService extends BaseRepoService {
   async addFiles(repoId: string, userId: string, files?: string[]) {
     const { repo, git } = await this.getRepoAndGit(repoId, userId);
 
-    // 전체 추가 (.) 또는 특정 파일들
     if (!files || files.length === 0) {
       try {
         await git.add(".");
@@ -70,7 +68,6 @@ export class GitOperationService extends BaseRepoService {
       }
     }
 
-    // 특정 파일들 추가 - 파일 존재 여부 확인
     const invalidFiles: string[] = [];
     const validFiles: string[] = [];
 
@@ -108,7 +105,6 @@ export class GitOperationService extends BaseRepoService {
   ) {
     const { repo, git } = await this.getRepoAndGit(repoId, userId);
 
-    // 브랜치 전환 (필요한 경우)
     if (branch) {
       try {
         const current = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
@@ -123,12 +119,10 @@ export class GitOperationService extends BaseRepoService {
       }
     }
 
-    // 사용자 정보 가져오기
     const user = await this.repoRepository.manager.findOne(User, {
       where: { id: userId },
     });
 
-    // 커밋 실행 (사용자별 Author 정보 설정)
     let commitResult;
     try {
       const authorName = user?.email?.split('@')[0] || 'Unknown';
@@ -148,17 +142,11 @@ export class GitOperationService extends BaseRepoService {
       throw new GitOperationException("commit", err.message);
     }
 
-    // 커밋 정보 조회
     try {
       const [{ hash, message: msg, date }] = (await git.log({ maxCount: 1 }))
         .all;
 
-      console.log('[GitOperation] Commit 성공:', {
-        hash,
-        message: msg,
-        repoId,
-        note: '⚠️ Push는 별도로 수행해야 합니다'
-      });
+      this.logger.debug(`Commit 성공: hash=${hash}, message=${msg}, repoId=${repoId} ⚠️ Push는 별도로 수행해야 합니다`);
 
       return {
         success: true,
@@ -193,22 +181,18 @@ export class GitOperationService extends BaseRepoService {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
-      // 커밋 해시가 유효한지 확인
       try {
         await git.revparse([commitHash]);
       } catch {
         throw new NotFoundException(`커밋 '${commitHash}'를 찾을 수 없습니다.`);
       }
 
-      // Reset 전 현재 상태 저장
       const beforeHash = (await git.revparse(["HEAD"])).trim();
       const beforeBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
 
-      // Reset 실행
       const resetOption = `--${mode}`;
       await git.reset([resetOption, commitHash]);
 
-      // Reset 후 상태
       const afterHash = (await git.revparse(["HEAD"])).trim();
       const status = await git.status();
 
@@ -218,7 +202,6 @@ export class GitOperationService extends BaseRepoService {
         from: beforeHash,
         to: afterHash,
         branch: beforeBranch,
-        // 상태 정보
         modified: status.modified || [],
         staged: status.staged || [],
         message: this.getResetMessage(mode, beforeHash, afterHash),

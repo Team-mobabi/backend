@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
@@ -20,6 +20,7 @@ import {
 
 @Injectable()
 export class GitRemoteService extends BaseRepoService {
+  private readonly logger = new Logger(GitRemoteService.name);
   private readonly remoteBasePath: string;
 
   constructor(
@@ -42,7 +43,6 @@ export class GitRemoteService extends BaseRepoService {
   ): Promise<PullResponse> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
-    // 로컬 변경사항 확인
     const status = await git.status();
     const hasUncommittedChanges =
       status.modified.length > 0 ||
@@ -58,7 +58,6 @@ export class GitRemoteService extends BaseRepoService {
       throw new GitUncommittedChangesException(changes);
     }
 
-    // 브랜치 이름 가져오기 (에러 처리 추가)
     let targetBranch: string;
     if (branch) {
       targetBranch = branch;
@@ -82,7 +81,6 @@ export class GitRemoteService extends BaseRepoService {
       );
     }
 
-    // 리모트 브랜치 존재 여부 확인
     let remoteRefCheck: string;
     try {
       remoteRefCheck = await git.raw([
@@ -127,7 +125,6 @@ export class GitRemoteService extends BaseRepoService {
     } catch (err) {
       // 충돌 에러는 정상 플로우로 처리 (merge와 동일)
       if (!/merge conflict|CONFLICT/i.test(err.message)) {
-        // 로컬 변경사항과 충돌
         if (/would be overwritten|needs merge/i.test(err.message)) {
           const postStatus = await git.status();
           throw new GitPullConflictException({
@@ -138,15 +135,12 @@ export class GitRemoteService extends BaseRepoService {
 
         throw new GitOperationException("pull", err.message);
       }
-      // 충돌은 아래에서 체크하여 응답에 포함
     }
 
-    // Pull 후 충돌 확인
     const postStatus = await git.status();
     const conflictFiles = postStatus.conflicted || [];
     const hasConflict = conflictFiles.length > 0;
 
-    // Pull 후 최신 해시 가져오기
     const finalHash = (await git.revparse(["HEAD"])).trim();
 
     return {
@@ -168,7 +162,6 @@ export class GitRemoteService extends BaseRepoService {
   ) {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
-    // 브랜치 이름 가져오기 (에러 처리 추가)
     let targetBranch: string;
     if (branch) {
       targetBranch = branch;
@@ -192,7 +185,6 @@ export class GitRemoteService extends BaseRepoService {
       );
     }
 
-    // 로컬 브랜치가 존재하는지 확인
     try {
       await git.raw(["rev-parse", "--verify", targetBranch]);
     } catch {
@@ -225,32 +217,17 @@ export class GitRemoteService extends BaseRepoService {
       ahead = a;
     }
 
-    // force push가 아니고, remote가 존재하며, ahead가 0이면 up-to-date
     if (!force && remoteExists && ahead === 0) {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    // push 실행 (upstream 미설정 에러 처리)
     try {
-      console.log('[GitRemote] Push 시작:', {
-        repoId,
-        remote,
-        targetBranch,
-        ahead,
-        force,
-        note: force ? '⚠️ Force Push 수행' : '🚀 실제로 Push를 수행합니다'
-      });
+      this.logger.debug(`Push 시작: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, ahead=${ahead}, force=${force} ${force ? '⚠️ Force Push 수행' : '🚀 실제로 Push를 수행합니다'}`);
 
-      // Force push 옵션 추가
       const pushOptions = force ? ['--force'] : [];
       const res = await git.push(remote, targetBranch, pushOptions);
 
-      console.log('[GitRemote] Push 성공:', {
-        repoId,
-        remote,
-        targetBranch,
-        pushed: res.pushed
-      });
+      this.logger.debug(`Push 성공: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, pushed=${JSON.stringify(res.pushed)}`);
 
       return {
         success: true,
@@ -272,7 +249,6 @@ export class GitRemoteService extends BaseRepoService {
         } catch (retryErr) {
           const retryErrorMessage = retryErr.message || retryErr.toString();
 
-          // Push 거부 처리
           if (/rejected|non-fast-forward/i.test(retryErrorMessage)) {
             throw new GitPushRejectedException({
               reason: retryErrorMessage.includes("non-fast-forward")
@@ -289,7 +265,6 @@ export class GitRemoteService extends BaseRepoService {
         }
       }
 
-      // Push 거부 처리
       if (/rejected|non-fast-forward/i.test(errorMessage)) {
         throw new GitPushRejectedException({
           reason: errorMessage.includes("non-fast-forward")
@@ -301,7 +276,6 @@ export class GitRemoteService extends BaseRepoService {
         });
       }
 
-      // 인증 실패
       if (/authentication|permission|unauthorized/i.test(errorMessage)) {
         throw new GitOperationException(
           "push",

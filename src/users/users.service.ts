@@ -30,7 +30,7 @@ export class UsersService {
   async searchUsers(query: string): Promise<User[]> {
     return this.usersRepository.find({
       where: { email: Like(`%${query}%`) },
-      take: 10, // 최대 10명까지
+      take: 10,
     });
   }
 
@@ -45,7 +45,6 @@ export class UsersService {
       throw new NotFoundException("사용자를 찾을 수 없습니다.");
     }
 
-    // 현재 비밀번호 확인
     const isPasswordMatch = await bcrypt.compare(
       currentPassword,
       user.passwordHash,
@@ -55,11 +54,9 @@ export class UsersService {
       throw new UnauthorizedException("현재 비밀번호가 일치하지 않습니다.");
     }
 
-    // 새 비밀번호 해싱
     const salt = await bcrypt.genSalt();
     const newPasswordHash = await bcrypt.hash(newPassword, salt);
 
-    // 비밀번호 업데이트
     await this.usersRepository.update(userId, { passwordHash: newPasswordHash });
 
     return { message: "비밀번호가 성공적으로 변경되었습니다." };

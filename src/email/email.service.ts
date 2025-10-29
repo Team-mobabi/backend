@@ -14,7 +14,6 @@ export class EmailService {
     private emailVerificationRepository: Repository<EmailVerification>,
     private configService: ConfigService,
   ) {
-    // nodemailer 트랜스포터 설정
     this.transporter = nodemailer.createTransport({
       host: this.configService.get<string>("EMAIL_HOST"),
       port: this.configService.get<number>("EMAIL_PORT"),
@@ -37,18 +36,15 @@ export class EmailService {
    * 인증 이메일 발송
    */
   async sendVerificationEmail(email: string): Promise<void> {
-    // 이전 미인증 코드 삭제
     await this.emailVerificationRepository.delete({
       email,
       verified: false,
     });
 
-    // 인증 코드 생성
     const code = this.generateVerificationCode();
     const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 5); // 5분 후 만료
+    expiresAt.setMinutes(expiresAt.getMinutes() + 5);
 
-    // DB에 저장
     const verification = this.emailVerificationRepository.create({
       email,
       code,
@@ -57,7 +53,6 @@ export class EmailService {
     });
     await this.emailVerificationRepository.save(verification);
 
-    // 이메일 발송
     const mailOptions = {
       from: this.configService.get<string>("EMAIL_FROM"),
       to: email,
@@ -88,12 +83,10 @@ export class EmailService {
    * 인증 코드 검증
    */
   async verifyCode(email: string, code: string): Promise<boolean> {
-    // 만료된 코드 삭제
     await this.emailVerificationRepository.delete({
       expiresAt: LessThan(new Date()),
     });
 
-    // 인증 코드 조회
     const verification = await this.emailVerificationRepository.findOne({
       where: {
         email,
@@ -108,14 +101,12 @@ export class EmailService {
       );
     }
 
-    // 만료 확인
     if (verification.expiresAt < new Date()) {
       throw new BadRequestException(
         "인증 코드가 만료되었습니다. 새로운 코드를 요청해주세요.",
       );
     }
 
-    // 인증 완료 처리
     verification.verified = true;
     await this.emailVerificationRepository.save(verification);
 

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import {
   FileNotFoundException,
   FileAlreadyExistsException,
@@ -28,6 +28,7 @@ import { BaseRepoService } from "@src/repos/services/base-repo.service";
 
 @Injectable()
 export class FileService extends BaseRepoService {
+  private readonly logger = new Logger(FileService.name);
   private readonly MAX_FILENAME_BYTES = 200; // Linux 파일시스템 255바이트 제한, 안전하게 200바이트로 설정
 
   constructor(
@@ -154,7 +155,6 @@ export class FileService extends BaseRepoService {
     filePath = "",
     overwrite = false,
   ): Promise<FileOperationResult> {
-    // 파일명 길이 검증
     this.validateFilename(filename);
 
     const { repo } = await this.getRepoAndGit(repoId, userId);
@@ -243,7 +243,7 @@ export class FileService extends BaseRepoService {
         await git.add(filePath);
       } catch (gitError) {
         // git add가 실패하면 (이미 추적되지 않는 파일 등) 무시
-        console.warn(`[FileService] Git add failed for ${filePath}:`, gitError.message);
+        this.logger.warn(`Git add failed for ${filePath}: ${gitError.message}`);
       }
 
       return {
@@ -286,33 +286,23 @@ export class FileService extends BaseRepoService {
     overwrite = false,
     paths?: string[],
   ): Promise<UploadResult> {
-    console.log('[FileService] uploadFiles 호출:', {
-      filesCount: files.length,
-      uploadPath,
-      overwrite,
-      paths,
-      fileOriginalNames: files.map(f => f.originalname)
-    });
+    this.logger.debug(`uploadFiles 호출: filesCount=${files.length}, uploadPath=${uploadPath}, overwrite=${overwrite}, paths=${JSON.stringify(paths)}, fileOriginalNames=${JSON.stringify(files.map(f => f.originalname))}`);
 
-    // 모든 파일명 검증 (업로드 시작 전에 미리 검증)
     for (let i = 0; i < files.length; i++) {
       const filePathToValidate = paths && paths[i] ? paths[i] : files[i].originalname;
-      console.log(`[FileService] 파일 ${i}: originalname=${files[i].originalname}, path=${paths?.[i]}, using=${filePathToValidate}`);
+      this.logger.debug(`파일 ${i}: originalname=${files[i].originalname}, path=${paths?.[i]}, using=${filePathToValidate}`);
       this.validateFilename(filePathToValidate);
     }
 
     const { repo } = await this.getRepoAndGit(repoId, userId);
 
-    // .gitignore 로드
     const ig = await this.loadGitignore(repo.gitPath);
 
-    // .gitignore 패턴에 매칭되는 파일 필터링
     const filteredFiles: Array<{ file: Express.Multer.File; relativePath: string }> = [];
     const ignoredFiles: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      // paths 배열이 있으면 사용, 없으면 file.originalname 사용
       const relativePath = paths && paths[i] ? paths[i] : file.originalname;
       const relativeFilePath = path.join(uploadPath, relativePath).replace(/\\/g, "/");
 
@@ -329,11 +319,9 @@ export class FileService extends BaseRepoService {
     const uploadedFiles: UploadedFileInfo[] = [];
 
     for (const { file, relativePath } of filteredFiles) {
-      // relativePath에서 경로와 파일명 분리 (폴더 구조 유지)
       const fileDir = path.dirname(relativePath);
       const fileName = path.basename(relativePath);
 
-      // 중간 디렉토리까지 포함한 전체 경로 생성
       const fullTargetDir = path.join(targetDir, fileDir);
       await this.ensureDirectoryExists(fullTargetDir);
 

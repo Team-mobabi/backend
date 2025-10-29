@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
@@ -18,6 +19,8 @@ import { MergeResponse } from "@src/repos/dto/responses.dto";
 
 @Injectable()
 export class BranchService extends BaseRepoService {
+  private readonly logger = new Logger(BranchService.name);
+
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
@@ -72,10 +75,7 @@ export class BranchService extends BaseRepoService {
       const options = baseBranchName ? [baseBranchName] : [];
       await git.checkout(["-b", newBranchName, ...options]);
 
-      // 현재 브랜치 확인
       const currentBranch = await git.revparse(["--abbrev-ref", "HEAD"]);
-
-      // 현재 커밋 해시
       const currentCommit = await git.revparse(["HEAD"]);
 
       return {
@@ -157,7 +157,6 @@ export class BranchService extends BaseRepoService {
       const currentBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
       const finalTargetBranch = targetBranch || currentBranch;
 
-      // 타겟 브랜치로 전환 (필요한 경우)
       if (currentBranch !== finalTargetBranch) {
         await git.checkout(finalTargetBranch);
       }
@@ -175,7 +174,6 @@ export class BranchService extends BaseRepoService {
       const afterHash = (await git.revparse(["HEAD"])).trim();
       const fastForward = beforeHash !== afterHash;
 
-      // 충돌 체크
       const statusResult = await git.status();
       const conflictFiles = statusResult.conflicted || [];
       const hasConflict = conflictFiles.length > 0;
@@ -229,21 +227,19 @@ export class BranchService extends BaseRepoService {
         }
       }
 
-      console.log('[getGraph] Local branches:', Object.entries(localBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
-      console.log('[getGraph] Remote branches:', Object.entries(remoteBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`));
+      this.logger.debug(`Local branches: ${Object.entries(localBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`).join(', ')}`);
+      this.logger.debug(`Remote branches: ${Object.entries(remoteBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`).join(', ')}`);
 
-      // 현재 브랜치들에서 도달 가능한 커밋만 가져오기 (reflog 제외)
       const pretty = "%H|%P|%an|%ai|%s";
 
-      // 모든 로컬 + 리모트 브랜치 HEAD를 명시적으로 지정
       const branchRefs = [
         ...Object.keys(localBranches),
         ...Object.keys(remoteBranches).map(b => `remotes/origin/${b}`)
       ];
 
       const args: string[] = [
-        ...branchRefs, // 브랜치 refs만 지정 (--all 대신)
-        "--date-order", // 시간순 정렬 (병합 관계 유지)
+        ...branchRefs,
+        "--date-order",
         `--max-count=${max}`,
         `--pretty=${pretty}`,
       ];
@@ -264,48 +260,44 @@ export class BranchService extends BaseRepoService {
             author,
             committedAt: iso,
             message: msg,
-            isMerge: parentsList.length > 1, // 병합 커밋인지
+            isMerge: parentsList.length > 1,
           };
         });
 
-      // 각 브랜치의 fork point 계산
-      // Merge 후에는 merge-base가 정확하지 않으므로,
-      // 브랜치 HEAD부터 역추적하여 main과 공통된 첫 커밋을 찾습니다
+      // 각 브랜치의 fork point 계산: merge-base는 merge 후 정확하지 않으므로
+      // 브랜치 HEAD부터 역추적하여 main과 공통된 첫 커밋을 찾음
       const branchForkPoints: Record<string, string | null> = {};
 
       if (localBranches.main) {
-        // main의 첫 번째 부모만 추적 (merge 전 main history만 수집)
+        // main의 첫 번째 부모만 추적
         const mainCommits = new Set<string>();
         let currentHash: string | null = localBranches.main;
         const visited = new Set<string>();
 
-        console.log('[getGraph] Collecting main commits (first-parent only), starting from:', localBranches.main.substring(0, 7));
+        this.logger.debug(`Collecting main commits (first-parent only), starting from: ${localBranches.main.substring(0, 7)}`);
 
         while (currentHash && !visited.has(currentHash)) {
           visited.add(currentHash);
 
           const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
           if (!commit) {
-            console.log('[getGraph] Commit not found in allCommits:', currentHash.substring(0, 7));
+            this.logger.debug(`Commit not found in allCommits: ${currentHash.substring(0, 7)}`);
             break;
           }
 
-          console.log('[getGraph] Adding to mainCommits:', commit.shortHash, commit.message);
+          this.logger.debug(`Adding to mainCommits: ${commit.shortHash} ${commit.message}`);
           mainCommits.add(commit.hash);
 
-          // 첫 번째 부모만 추적 (merge 커밋의 경우 첫 번째 부모는 merge 전 main)
           currentHash = commit.parents[0] || null;
         }
 
-        console.log('[getGraph] Total main commits collected:', mainCommits.size);
+        this.logger.debug(`Total main commits collected: ${mainCommits.size}`);
 
-        // 각 브랜치의 fork point 찾기
         for (const [branchName, headHash] of Object.entries(localBranches)) {
           if (branchName === 'main') continue;
 
-          console.log(`[getGraph] Finding forkPoint for ${branchName}, HEAD:`, headHash.substring(0, 7));
+          this.logger.debug(`Finding forkPoint for ${branchName}, HEAD: ${headHash.substring(0, 7)}`);
 
-          // 브랜치 HEAD부터 역추적하여 main과 겹치는 첫 커밋 찾기
           let branchHash: string | null = headHash;
           const branchVisited = new Set<string>();
           let forkPoint: string | null = null;
@@ -314,16 +306,15 @@ export class BranchService extends BaseRepoService {
             branchVisited.add(branchHash);
             const commit = allCommits.find(c => c.hash === branchHash || c.hash.startsWith(branchHash as string));
             if (!commit) {
-              console.log(`[getGraph] ${branchName}: Commit not found:`, branchHash.substring(0, 7));
+              this.logger.debug(`${branchName}: Commit not found: ${branchHash.substring(0, 7)}`);
               break;
             }
 
-            console.log(`[getGraph] ${branchName}: Checking commit ${commit.shortHash} (${commit.message}), in main:`, mainCommits.has(commit.hash));
+            this.logger.debug(`${branchName}: Checking commit ${commit.shortHash} (${commit.message}), in main: ${mainCommits.has(commit.hash)}`);
 
-            // main에 있는 커밋이면 그것이 fork point
             if (mainCommits.has(commit.hash)) {
               forkPoint = commit.hash;
-              console.log(`[getGraph] ${branchName}: Found forkPoint:`, commit.shortHash, commit.message);
+              this.logger.debug(`${branchName}: Found forkPoint: ${commit.shortHash} ${commit.message}`);
               break;
             }
 
@@ -331,14 +322,12 @@ export class BranchService extends BaseRepoService {
           }
 
           branchForkPoints[branchName] = forkPoint;
-          console.log(`[getGraph] ${branchName}: Final forkPoint:`, forkPoint?.substring(0, 7) || 'null');
+          this.logger.debug(`${branchName}: Final forkPoint: ${forkPoint?.substring(0, 7) || 'null'}`);
         }
       }
 
-      // 각 커밋이 어느 브랜치에 속하는지 계산
       const commitToBranches: Map<string, string[]> = new Map();
 
-      // main 브랜치 먼저 마킹 (모든 커밋 포함)
       if (localBranches.main) {
         const visited = new Set<string>();
         let currentHash: string | null = localBranches.main;
@@ -358,7 +347,6 @@ export class BranchService extends BaseRepoService {
         }
       }
 
-      // 다른 브랜치는 fork point 이후 커밋만 마킹
       for (const [branchName, headHash] of Object.entries(localBranches)) {
         if (branchName === 'main') continue;
 
@@ -373,9 +361,8 @@ export class BranchService extends BaseRepoService {
 
           const fullHash = commit.hash;
 
-          // fork point에 도달하면 중단 (fork point는 main에 속함)
+          // fork point에 도달하면 중단
           if (forkPoint && fullHash.startsWith(forkPoint)) {
-            // fork point도 이 브랜치에 속한다고 표시 (공통 조상)
             if (!commitToBranches.has(fullHash)) {
               commitToBranches.set(fullHash, []);
             }
@@ -383,7 +370,6 @@ export class BranchService extends BaseRepoService {
             break;
           }
 
-          // 일반 커밋 마킹
           if (!commitToBranches.has(fullHash)) {
             commitToBranches.set(fullHash, []);
           }
@@ -393,16 +379,13 @@ export class BranchService extends BaseRepoService {
         }
       }
 
-      // 커밋에 브랜치 정보 추가
       const enrichedCommits = allCommits.map(commit => {
         const branches = commitToBranches.get(commit.hash) || [];
 
-        // isHead 계산: 이 커밋을 가리키는 모든 브랜치 찾기
         const headsPointingHere = Object.entries(localBranches).filter(
           ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
         );
 
-        // 여러 브랜치가 같은 커밋을 가리킬 때: main 우선, 그 다음 사전순
         let headBranch: string | null = null;
         if (headsPointingHere.length > 0) {
           const mainHead = headsPointingHere.find(([name, _]) => name === 'main');
@@ -411,12 +394,11 @@ export class BranchService extends BaseRepoService {
 
         return {
           ...commit,
-          branches, // 이 커밋이 속한 브랜치들
-          isHead: headBranch, // 브랜치 HEAD인지 (main 우선)
+          branches,
+          isHead: headBranch,
         };
       });
 
-      // 각 브랜치별로 커밋 배열 구성 (기존 방식 유지)
       const buildBranchCommits = (branchHeads: Record<string, string>) => {
         const result: Record<string, any[]> = {};
         for (const [branchName, headHash] of Object.entries(branchHeads)) {
@@ -441,28 +423,28 @@ export class BranchService extends BaseRepoService {
             currentHash = commit.parents[0] || null;
           }
 
-          result[branchName] = commits;  // reverse 제거 - 최신 커밋이 먼저 (HEAD부터 시작)
+          result[branchName] = commits;
         }
         return result;
       };
 
       const local = {
         branches: buildBranchCommits(localBranches),
-        branchHeads: localBranches,  // 로컬 브랜치의 HEAD 커밋들
+        branchHeads: localBranches,
       };
 
       const remote = {
         branches: buildBranchCommits(remoteBranches),
-        branchHeads: remoteBranches,  // 리모트 브랜치의 HEAD 커밋들
+        branchHeads: remoteBranches,
       };
 
       return {
         local,
         remote,
         currentBranch,
-        branchHeads: localBranches, // 하위 호환성을 위해 유지
-        commits: enrichedCommits, // 전체 커밋 그래프 (브랜치 정보 포함)
-        forkPoints: branchForkPoints, // 각 브랜치의 분기점
+        branchHeads: localBranches,
+        commits: enrichedCommits,
+        forkPoints: branchForkPoints,
       };
     } catch (err) {
       throw new InternalServerErrorException(
