@@ -106,7 +106,7 @@ export class GitOperationService extends BaseRepoService {
     message: string,
     branch?: string,
   ) {
-    const { repo, git } = await this.getRepoAndGit(repoId, userId);
+    const { git } = await this.getRepoAndGit(repoId, userId);
 
     if (branch) {
       try {
