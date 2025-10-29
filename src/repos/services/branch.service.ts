@@ -382,20 +382,34 @@ export class BranchService extends BaseRepoService {
       const enrichedCommits = allCommits.map(commit => {
         const branches = commitToBranches.get(commit.hash) || [];
 
-        const headsPointingHere = Object.entries(localBranches).filter(
+        // Local branches의 HEAD 확인
+        const localHeadsPointingHere = Object.entries(localBranches).filter(
           ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
         );
 
-        let headBranch: string | null = null;
-        if (headsPointingHere.length > 0) {
-          const mainHead = headsPointingHere.find(([name, _]) => name === 'main');
-          headBranch = mainHead ? mainHead[0] : headsPointingHere[0][0];
+        let localHeadBranch: string | null = null;
+        if (localHeadsPointingHere.length > 0) {
+          const mainHead = localHeadsPointingHere.find(([name, _]) => name === 'main');
+          localHeadBranch = mainHead ? mainHead[0] : localHeadsPointingHere[0][0];
+        }
+
+        // Remote branches의 HEAD 확인
+        const remoteHeadsPointingHere = Object.entries(remoteBranches).filter(
+          ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
+        );
+
+        let remoteHeadBranch: string | null = null;
+        if (remoteHeadsPointingHere.length > 0) {
+          const mainHead = remoteHeadsPointingHere.find(([name, _]) => name === 'main');
+          remoteHeadBranch = mainHead ? mainHead[0] : remoteHeadsPointingHere[0][0];
         }
 
         return {
           ...commit,
           branches,
-          isHead: headBranch,
+          isHead: localHeadBranch,  // 기존 호환성 유지
+          localIsHead: localHeadBranch,
+          remoteIsHead: remoteHeadBranch,
         };
       });
 
