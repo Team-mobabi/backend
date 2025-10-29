@@ -151,25 +151,23 @@ export class ReposService extends BaseRepoService {
     savedRepo.gitPath = path.join(this.repoBasePath, savedRepo.repoId);
 
     try {
-      await this.ensureDirectoryExists(path.dirname(savedRepo.gitPath));
-      const git = simpleGit();
-
-      await git.clone(sourceRepo.gitPath, savedRepo.gitPath);
-
-      const forkedGit = simpleGit(savedRepo.gitPath);
-      await forkedGit.addConfig("commit.gpgsign", "false");
-
       const env = this.configService.get<string>("ENV", "dev");
       const remotePathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
       const remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
       const forkedRemotePath = path.join(remoteBasePath, `${savedRepo.repoId}.git`);
 
-      await this.ensureDirectoryExists(forkedRemotePath);
-      const bareGit = simpleGit(forkedRemotePath);
-      await bareGit.init(true);
+      // 1. 먼저 bare repository에 mirror clone (모든 브랜치 복사)
+      await this.ensureDirectoryExists(path.dirname(forkedRemotePath));
+      const git = simpleGit();
+      await git.clone(sourceRepo.gitPath, forkedRemotePath, ['--mirror']);
 
-      await forkedGit.removeRemote("origin");
-      await forkedGit.addRemote("origin", forkedRemotePath);
+      // 2. bare repository에서 working directory clone
+      await this.ensureDirectoryExists(path.dirname(savedRepo.gitPath));
+      await git.clone(forkedRemotePath, savedRepo.gitPath);
+
+      // 3. gpgsign 설정
+      const forkedGit = simpleGit(savedRepo.gitPath);
+      await forkedGit.addConfig("commit.gpgsign", "false");
 
       const repo = await this.repoRepository.save(savedRepo);
 
