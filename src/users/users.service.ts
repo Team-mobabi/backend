@@ -73,4 +73,12 @@ export class UsersService {
 
     return { message: "회원 탈퇴가 완료되었습니다." };
   }
+
+  async updateRefreshToken(userId: string, refreshToken: string | undefined): Promise<void> {
+    await this.usersRepository.update(userId, { refreshToken });
+  }
+
+  async findUserByRefreshToken(refreshToken: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { refreshToken } });
+  }
 }

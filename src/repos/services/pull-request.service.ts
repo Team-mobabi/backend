@@ -15,7 +15,7 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
 import { ConfigService } from "@nestjs/config";
-import { BranchService } from "./branch.service";
+import { BranchService } from "@src/repos/services/branch/branch.service";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 
 @Injectable()

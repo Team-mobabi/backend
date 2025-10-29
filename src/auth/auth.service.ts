@@ -38,7 +38,7 @@ export class AuthService {
     return { message: "회원가입이 완료되었습니다." };
   }
 
-  async signIn(signInDto: SignInDto): Promise<{ accessToken: string }> {
+  async signIn(signInDto: SignInDto): Promise<{ accessToken: string; refreshToken: string }> {
     const { email, password } = signInDto;
     const user = await this.usersService.findUserByEmail(email);
 
@@ -54,8 +54,34 @@ export class AuthService {
 
     const payload = { email: user.email, sub: user.id };
 
-    const accessToken = this.jwtService.sign(payload);
+    const accessToken = this.jwtService.sign(payload, { expiresIn: "1h" });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: "7d" });
 
-    return { accessToken };
+    await this.usersService.updateRefreshToken(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
+  }
+
+  async refresh(refreshToken: string): Promise<{ accessToken: string }> {
+    try {
+      const payload = this.jwtService.verify(refreshToken);
+      const user = await this.usersService.findUserByRefreshToken(refreshToken);
+
+      if (!user || user.id !== payload.sub) {
+        throw new UnauthorizedException("유효하지 않은 Refresh Token입니다.");
+      }
+
+      const newPayload = { email: user.email, sub: user.id };
+      const accessToken = this.jwtService.sign(newPayload, { expiresIn: "1h" });
+
+      return { accessToken };
+    } catch (err) {
+      throw new UnauthorizedException("유효하지 않은 Refresh Token입니다.");
+    }
+  }
+
+  async logout(userId: string): Promise<{ message: string }> {
+    await this.usersService.updateRefreshToken(userId, undefined);
+    return { message: "로그아웃되었습니다." };
   }
 }

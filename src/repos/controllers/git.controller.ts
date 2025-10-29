@@ -15,7 +15,7 @@ import {
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
-import { GitRemoteService } from "@src/repos/services/git-remote.service";
+import { GitRemoteService } from "@src/repos/services/git-remote/git-remote.service";
 import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
 import { PushDto } from "@src/repos/dto/push.dto";

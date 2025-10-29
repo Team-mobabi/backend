@@ -95,3 +95,27 @@ export class PullResponse {
   })
   conflictFiles: string[];
 }
+
+/**
+ * Push 응답
+ */
+export class PushResponse {
+  @ApiProperty({
+    description: "Push 성공 여부",
+    example: true,
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: "이미 최신 상태인지 여부",
+    example: false,
+  })
+  upToDate: boolean;
+
+  @ApiProperty({
+    description: "Push된 브랜치 정보",
+    example: [],
+    type: [Object],
+  })
+  pushed: any[];
+}

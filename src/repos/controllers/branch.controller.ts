@@ -17,7 +17,7 @@ import {
   ApiBearerAuth,
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
-import { BranchService } from "@src/repos/services/branch.service";
+import { BranchService } from "@src/repos/services/branch/branch.service";
 import { MergeResponse } from "@src/repos/dto/responses.dto";
 import { CreateBranchDto } from "@src/repos/dto/create-branch.dto";
 import { SwitchBranchDto } from "@src/repos/dto/switch-branch.dto";

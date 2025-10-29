@@ -4,7 +4,7 @@ import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { RepoCollaborator, CollaboratorRole } from "@src/repos/entities/repo-collaborator.entity";
-import { BaseRepoService } from "./base-repo.service";
+import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { AddCollaboratorDto, UpdateCollaboratorDto } from "@src/repos/dto/collaborator.dto";
 
 @Injectable()

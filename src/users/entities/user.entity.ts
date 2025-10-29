@@ -28,6 +28,11 @@ export class User {
   @Column()
   passwordHash: string;
 
+  @ApiHideProperty()
+  @Exclude()
+  @Column({ nullable: true })
+  refreshToken?: string;
+
   @ApiProperty({
     description: "계정 생성일",
     example: "2024-01-01T00:00:00.000Z",
