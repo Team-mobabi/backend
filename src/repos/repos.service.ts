@@ -45,7 +45,7 @@ export class ReposService extends BaseRepoService {
       const remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
       const remotePath = path.join(remoteBasePath, `${savedRepo.repoId}.git`);
 
-      await this.ensureDirectoryExists(path.dirname(remotePath));
+      await this.ensureDirectoryExists(remotePath);
       const remoteGit = simpleGit(remotePath);
       await remoteGit.init(true, { "--initial-branch": "main" });
 
