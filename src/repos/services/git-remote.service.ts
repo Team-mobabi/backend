@@ -6,6 +6,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import simpleGit from "simple-git";
 import { Repo } from "@src/repos/entities/repo.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { PullResponse } from "@src/repos/dto/responses.dto";
 import {
@@ -26,9 +27,11 @@ export class GitRemoteService extends BaseRepoService {
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
+    @InjectRepository(RepoCollaborator)
+    collaboratorRepository: Repository<RepoCollaborator>,
     configService: ConfigService,
   ) {
-    super(repoRepository, configService);
+    super(repoRepository, collaboratorRepository, configService);
     const env = this.configService.get<string>("ENV", "dev");
     const pathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
     this.remoteBasePath = this.configService.get<string>(pathKey, "data/remote");

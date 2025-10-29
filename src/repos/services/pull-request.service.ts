@@ -11,6 +11,7 @@ import {
 } from "@src/repos/entities/pull-request.entity";
 import { PrReview, ReviewStatus } from "@src/repos/entities/pr-review.entity";
 import { Repo } from "@src/repos/entities/repo.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
 import { ConfigService } from "@nestjs/config";
@@ -22,6 +23,8 @@ export class PullRequestService extends BaseRepoService {
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
+    @InjectRepository(RepoCollaborator)
+    collaboratorRepository: Repository<RepoCollaborator>,
     @InjectRepository(PullRequest)
     private readonly pullRequestRepository: Repository<PullRequest>,
     @InjectRepository(PrReview)
@@ -29,7 +32,7 @@ export class PullRequestService extends BaseRepoService {
     private readonly branchService: BranchService,
     configService: ConfigService,
   ) {
-    super(repoRepository, configService);
+    super(repoRepository, collaboratorRepository, configService);
   }
 
   async createPullRequest(

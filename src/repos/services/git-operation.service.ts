@@ -5,6 +5,7 @@ import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Repo } from "@src/repos/entities/repo.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { User } from "@src/users/entities/user.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { GitOperationException } from "@src/repos/exceptions/repo.exceptions";
@@ -17,9 +18,11 @@ export class GitOperationService extends BaseRepoService {
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
+    @InjectRepository(RepoCollaborator)
+    collaboratorRepository: Repository<RepoCollaborator>,
     configService: ConfigService,
   ) {
-    super(repoRepository, configService);
+    super(repoRepository, collaboratorRepository, configService);
   }
 
   async status(repoId: string, userId: string) {

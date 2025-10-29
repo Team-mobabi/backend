@@ -7,6 +7,7 @@ import { PullRequestController } from "@src/repos/controllers/pull-request.contr
 import { FileController } from "@src/repos/controllers/file.controller";
 import { ConflictController } from "@src/repos/controllers/conflict.controller";
 import { DiffController } from "@src/repos/controllers/diff.controller";
+import { CollaboratorController } from "@src/repos/controllers/collaborator.controller";
 import { GitRemoteService } from "@src/repos/services/git-remote.service";
 import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { BranchService } from "@src/repos/services/branch.service";
@@ -15,13 +16,15 @@ import { FileService } from "@src/repos/services/file.service";
 import { GitConflictService } from "@src/repos/services/git-conflict.service";
 import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
 import { GitDiffService } from "@src/repos/services/git-diff.service";
+import { CollaboratorService } from "@src/repos/services/collaborator.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { PullRequest } from "@src/repos/entities/pull-request.entity";
 import { PrReview } from "@src/repos/entities/pr-review.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Repo, PullRequest, PrReview])],
+  imports: [TypeOrmModule.forFeature([Repo, PullRequest, PrReview, RepoCollaborator])],
   controllers: [
     ReposController,
     GitController,
@@ -30,6 +33,7 @@ import { PrReview } from "@src/repos/entities/pr-review.entity";
     FileController,
     ConflictController,
     DiffController,
+    CollaboratorController,
   ],
   providers: [
     ReposService,
@@ -41,6 +45,7 @@ import { PrReview } from "@src/repos/entities/pr-review.entity";
     GitConflictService,
     AIConflictResolverService,
     GitDiffService,
+    CollaboratorService,
   ],
   exports: [ReposService],
 })

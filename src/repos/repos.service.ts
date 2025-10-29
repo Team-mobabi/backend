@@ -3,6 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { PullRequest } from "@src/repos/entities/pull-request.entity";
 import { PrReview } from "@src/repos/entities/pr-review.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import { RepoResponseDto, RepoOwnerDto } from "@src/repos/dto/repo-response.dto";
@@ -18,13 +19,15 @@ export class ReposService extends BaseRepoService {
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
+    @InjectRepository(RepoCollaborator)
+    collaboratorRepository: Repository<RepoCollaborator>,
     @InjectRepository(PullRequest)
     private readonly pullRequestRepository: Repository<PullRequest>,
     @InjectRepository(PrReview)
     private readonly prReviewRepository: Repository<PrReview>,
     configService: ConfigService,
   ) {
-    super(repoRepository, configService);
+    super(repoRepository, collaboratorRepository, configService);
   }
 
   async createRepo(
@@ -155,6 +158,18 @@ export class ReposService extends BaseRepoService {
 
       const forkedGit = simpleGit(savedRepo.gitPath);
       await forkedGit.addConfig("commit.gpgsign", "false");
+
+      const env = this.configService.get<string>("ENV", "dev");
+      const remotePathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
+      const remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
+      const forkedRemotePath = path.join(remoteBasePath, `${savedRepo.repoId}.git`);
+
+      await this.ensureDirectoryExists(forkedRemotePath);
+      const bareGit = simpleGit(forkedRemotePath);
+      await bareGit.init(true);
+
+      await forkedGit.removeRemote("origin");
+      await forkedGit.addRemote("origin", forkedRemotePath);
 
       const repo = await this.repoRepository.save(savedRepo);
 

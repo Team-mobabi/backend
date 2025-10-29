@@ -13,6 +13,7 @@ import simpleGit, {
   SimpleGit,
 } from "simple-git";
 import { Repo } from "@src/repos/entities/repo.entity";
+import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { ConfigService } from "@nestjs/config";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { MergeResponse } from "@src/repos/dto/responses.dto";
@@ -24,9 +25,11 @@ export class BranchService extends BaseRepoService {
   constructor(
     @InjectRepository(Repo)
     repoRepository: Repository<Repo>,
+    @InjectRepository(RepoCollaborator)
+    collaboratorRepository: Repository<RepoCollaborator>,
     configService: ConfigService,
   ) {
-    super(repoRepository, configService);
+    super(repoRepository, collaboratorRepository, configService);
   }
 
   async getBranches(repoId: string, userId: string, limit = 20) {
