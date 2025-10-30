@@ -183,13 +183,10 @@ export class PullRequestController {
     @AuthUser() user: User,
     @Query("path") filePath?: string,
   ) {
-    // PR 정보 조회
     const pr = await this.pullRequestService.getPullRequest(repoId, user.id, prId);
 
-    // source와 target 브랜치 간 diff
-    return this.gitDiffService.getBranchDiff(
+    return this.gitDiffService.getBranchDiffFromRemote(
       repoId,
-      user.id,
       pr.sourceBranch,
       pr.targetBranch,
       filePath

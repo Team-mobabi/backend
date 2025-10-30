@@ -5,6 +5,8 @@ import { Repo } from "@src/repos/entities/repo.entity";
 import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { ConfigService } from "@nestjs/config";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
+import simpleGit from "simple-git";
+import * as path from "node:path";
 
 export interface DiffResult {
   file: string;
@@ -212,6 +214,31 @@ export class GitDiffService extends BaseRepoService {
       return this.parseNumstat(output);
     } catch (error) {
       throw new Error(`Diff stats 조회 실패: ${error.message}`);
+    }
+  }
+
+  /**
+   * Bare 저장소에서 직접 브랜치 간 diff 조회 (PR용)
+   * 사용자 로컬 저장소를 건드리지 않고 공유 bare 저장소에서 직접 조회
+   */
+  async getBranchDiffFromRemote(
+    repoId: string,
+    sourceBranch: string,
+    targetBranch: string,
+    filePath?: string,
+  ): Promise<FileDiff[]> {
+    const remotePath = path.join(this.remoteBasePath, `${repoId}.git`);
+    const git = simpleGit(remotePath);
+
+    try {
+      const diffArgs = [targetBranch, sourceBranch];
+      if (filePath) diffArgs.push("--", filePath);
+
+      const diffOutput = await git.diff(diffArgs);
+
+      return this.parseDiffOutput(diffOutput);
+    } catch (error) {
+      throw new Error(`Branch diff 조회 실패: ${error.message}`);
     }
   }
 
