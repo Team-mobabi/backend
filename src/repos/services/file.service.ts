@@ -1,4 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from "@nestjs/common";
+import { Response } from "express";
+import * as archiver from "archiver";
 import {
   FileNotFoundException,
   FileAlreadyExistsException,
@@ -366,5 +368,79 @@ export class FileService extends BaseRepoService {
         message: `${uploadedFiles.length}개 파일 업로드 완료, ${ignoredFiles.length}개 파일 제외(.gitignore)`
       }),
     };
+  }
+
+  async downloadFile(
+    repoId: string,
+    userId: string,
+    filePath: string,
+    res: Response,
+  ): Promise<void> {
+    if (!filePath) {
+      throw new HttpException("파일 경로가 필요합니다.", HttpStatus.BAD_REQUEST);
+    }
+
+    const { repoPath } = await this.getRepoAndGit(repoId, userId);
+
+    const fullPath = path.join(repoPath, filePath);
+    const normalizedPath = path.normalize(fullPath);
+
+    if (!normalizedPath.startsWith(repoPath)) {
+      throw new HttpException("잘못된 파일 경로입니다.", HttpStatus.BAD_REQUEST);
+    }
+
+    try {
+      const stats = await fs.stat(normalizedPath);
+
+      if (stats.isDirectory()) {
+        throw new PathIsDirectoryException(filePath);
+      }
+
+      const filename = path.basename(filePath);
+
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Length', stats.size);
+
+      const fileBuffer = await fs.readFile(normalizedPath);
+      res.send(fileBuffer);
+    } catch (err) {
+      if (err.code === "ENOENT") {
+        throw new FileNotFoundException(filePath);
+      }
+      throw err;
+    }
+  }
+
+  async downloadRepository(
+    repoId: string,
+    userId: string,
+    res: Response,
+  ): Promise<void> {
+    const { repo, repoPath } = await this.getRepoAndGit(repoId, userId);
+
+    const zipFilename = `${repo.name || repoId}.zip`;
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFilename)}"`);
+    res.setHeader('Content-Type', 'application/zip');
+
+    const archive = archiver('zip', {
+      zlib: { level: 9 }
+    });
+
+    archive.on('error', (err) => {
+      this.logger.error(`Archive error: ${err.message}`);
+      throw err;
+    });
+
+    archive.pipe(res);
+
+    archive.glob('**/*', {
+      cwd: repoPath,
+      ignore: ['.git/**', '.git'],
+      dot: true
+    });
+
+    await archive.finalize();
   }
 }

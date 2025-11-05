@@ -9,10 +9,12 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
+import { Response } from "express";
 import {
   ApiTags,
   ApiOperation,
@@ -20,6 +22,7 @@ import {
   ApiBearerAuth,
   ApiConsumes,
   ApiBody,
+  ApiQuery,
 } from "@nestjs/swagger";
 import { FilesInterceptor } from "@nestjs/platform-express";
 import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
@@ -249,5 +252,114 @@ fetch('/repos/:repoId/files', {
     @Query("path") filePath: string,
   ) {
     return this.fileService.deleteFile(repoId, user.id, filePath);
+  }
+
+  @ApiOperation({
+    summary: "파일 다운로드",
+    description: `저장소의 파일을 다운로드합니다. 텍스트/바이너리 모든 파일 지원
+
+**사용 예시:**
+\`\`\`bash
+# curl
+curl -X GET "http://localhost:6101/repos/:repoId/files/download?path=README.md" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -o README.md
+
+# JavaScript
+fetch('/repos/:repoId/files/download?path=uploads/image.png', {
+  headers: { 'Authorization': 'Bearer TOKEN' }
+})
+.then(res => res.blob())
+.then(blob => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'image.png';
+  a.click();
+});
+\`\`\`
+`
+  })
+  @ApiQuery({
+    name: 'path',
+    required: true,
+    description: '다운로드할 파일의 경로',
+    example: 'README.md',
+    type: String
+  })
+  @ApiResponse({
+    status: 200,
+    description: "파일 다운로드 성공",
+    content: {
+      'application/octet-stream': {
+        schema: { type: 'string', format: 'binary' }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: "잘못된 파일 경로" })
+  @ApiResponse({ status: 403, description: "권한 없음" })
+  @ApiResponse({ status: 404, description: "파일 또는 저장소를 찾을 수 없음" })
+  @Get(":repoId/files/download")
+  @HttpCode(HttpStatus.OK)
+  async downloadFile(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Query("path") filePath: string,
+    @Res() res: Response,
+  ) {
+    return this.fileService.downloadFile(repoId, user.id, filePath, res);
+  }
+
+  @ApiOperation({
+    summary: "저장소 전체 다운로드",
+    description: `저장소 전체를 zip 파일로 다운로드합니다. .git 폴더는 제외됩니다.
+
+**사용 예시:**
+\`\`\`bash
+# curl
+curl -X GET "http://localhost:6101/repos/:repoId/download" \\
+  -H "Authorization: Bearer YOUR_TOKEN" \\
+  -o repository.zip
+
+# JavaScript
+fetch('/repos/:repoId/download', {
+  headers: { 'Authorization': 'Bearer TOKEN' }
+})
+.then(res => res.blob())
+.then(blob => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'my-project.zip';
+  a.click();
+});
+\`\`\`
+
+**특징:**
+- .git 폴더 제외 (순수 소스 코드만)
+- 파일 구조 유지
+- 저장소 이름으로 zip 파일명 자동 생성
+`
+  })
+  @ApiResponse({
+    status: 200,
+    description: "저장소 zip 다운로드 성공",
+    content: {
+      'application/zip': {
+        schema: { type: 'string', format: 'binary' }
+      }
+    }
+  })
+  @ApiResponse({ status: 403, description: "권한 없음" })
+  @ApiResponse({ status: 404, description: "저장소를 찾을 수 없음" })
+  @ApiResponse({ status: 500, description: "압축 파일 생성 실패" })
+  @Get(":repoId/download")
+  @HttpCode(HttpStatus.OK)
+  async downloadRepository(
+    @Param("repoId") repoId: string,
+    @AuthUser() user: User,
+    @Res() res: Response,
+  ) {
+    return this.fileService.downloadRepository(repoId, user.id, res);
   }
 }
