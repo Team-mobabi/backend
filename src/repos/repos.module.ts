@@ -8,6 +8,7 @@ import { FileController } from "@src/repos/controllers/file.controller";
 import { ConflictController } from "@src/repos/controllers/conflict.controller";
 import { DiffController } from "@src/repos/controllers/diff.controller";
 import { CollaboratorController } from "@src/repos/controllers/collaborator.controller";
+import { AIAssistantController } from "@src/repos/controllers/ai-assistant.controller";
 import { GitRemoteService } from "@src/repos/services/git-remote/git-remote.service";
 import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { BranchService } from "@src/repos/services/branch/branch.service";
@@ -15,6 +16,7 @@ import { PullRequestService } from "@src/repos/services/pull-request.service";
 import { FileService } from "@src/repos/services/file.service";
 import { GitConflictService } from "@src/repos/services/git-conflict.service";
 import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
+import { AIAssistantService } from "@src/repos/services/ai-assistant.service";
 import { GitDiffService } from "@src/repos/services/git-diff.service";
 import { CollaboratorService } from "@src/repos/services/collaborator.service";
 import { TypeOrmModule } from "@nestjs/typeorm";
@@ -34,6 +36,7 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
     ConflictController,
     DiffController,
     CollaboratorController,
+    AIAssistantController,
   ],
   providers: [
     ReposService,
@@ -44,6 +47,7 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
     FileService,
     GitConflictService,
     AIConflictResolverService,
+    AIAssistantService,
     GitDiffService,
     CollaboratorService,
   ],
