@@ -112,6 +112,7 @@ export class AIAssistantController extends BaseRepoService {
         const gitContext = await this.getGitContext(repoId, user.id);
         const response = await this.aiAssistant.answerQuestion(
             body.question,
+
             gitContext,
         );
 

@@ -30,18 +30,22 @@ export class AIAssistantService {
     const apiKey = this.configService.get<string>("CLAUDE_API_KEY");
 
     if (!apiKey) {
-      throw new Error("CLAUDE_API_KEY is not configured");
+      console.warn("CLAUDE_API_KEY is not configured. AI assistant will not be available.");
+    } else {
+      this.anthropic = new Anthropic({
+        apiKey,
+      });
     }
-
-    this.anthropic = new Anthropic({
-      apiKey,
-    });
   }
 
   async answerQuestion(
     question: string,
     gitContext?: GitContext,
   ): Promise<AIAssistantResponse> {
+    if (!this.anthropic) {
+      throw new Error("AI assistant is not available. CLAUDE_API_KEY is not configured.");
+    }
+
     try {
       const contextString = this.formatGitContext(gitContext);
 
@@ -125,6 +129,10 @@ RELATED_CONCEPTS:
   }
 
   async suggestNextAction(gitContext: GitContext): Promise<AIAssistantResponse> {
+    if (!this.anthropic) {
+      throw new Error("AI assistant is not available. CLAUDE_API_KEY is not configured.");
+    }
+
     try {
       const contextString = this.formatGitContext(gitContext);
 
