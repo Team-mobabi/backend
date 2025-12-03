@@ -75,7 +75,8 @@ export class UsersService {
   }
 
   async updateRefreshToken(userId: string, refreshToken: string | undefined): Promise<void> {
-    await this.usersRepository.update(userId, { refreshToken });
+    // undefined를 null로 변환 (TypeORM은 undefined를 처리하지 못함)
+    await this.usersRepository.update(userId, { refreshToken: refreshToken ?? null });
   }
 
   async findUserByRefreshToken(refreshToken: string): Promise<User | null> {

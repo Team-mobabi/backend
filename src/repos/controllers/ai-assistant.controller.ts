@@ -13,7 +13,7 @@ import {
     ApiOperation,
     ApiResponse,
     ApiBearerAuth,
-    ApiBody,
+    ApiParam,
 } from "@nestjs/swagger";
 import {JwtAuthGuard} from "@src/auth/guards/jwt-auth.guard";
 import {AIAssistantService, GitContext} from "@src/repos/services/ai-assistant.service";
@@ -25,6 +25,7 @@ import {Repository} from "typeorm";
 import {Repo} from "@src/repos/entities/repo.entity";
 import {RepoCollaborator} from "@src/repos/entities/repo-collaborator.entity";
 import {ConfigService} from "@nestjs/config";
+import {AskQuestionDto, AIAssistantResponseDto} from "@src/repos/dto/ai-assistant.dto";
 
 @ApiTags("AI Assistant")
 @ApiBearerAuth("JWT-auth")
@@ -58,48 +59,59 @@ export class AIAssistantController extends BaseRepoService {
 - 구체적인 행동 지침 제공
 - 관련 개념 함께 안내`,
     })
+    @ApiParam({
+        name: "repoId",
+        description: "저장소 ID (UUID)",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
     @ApiResponse({
         status: 200,
         description: "AI 답변 성공",
+        type: AIAssistantResponseDto,
+    })
+    @ApiResponse({
+        status: 400,
+        description: "잘못된 요청 (질문이 비어있음)",
         schema: {
             type: "object",
             properties: {
-                answer: {
-                    type: "string",
-                    description: "질문에 대한 상세한 답변",
-                    example:
-                        "브랜치(branch)는 독립적인 작업 공간입니다. 마치 평행 세계처럼, 메인 코드에 영향을 주지 않고 새로운 기능을 개발할 수 있어요...",
-                },
-                suggestedActions: {
-                    type: "array",
-                    items: {type: "string"},
-                    description: "다음에 할 수 있는 구체적인 행동들",
-                    example: [
-                        "새 브랜치 만들기",
-                        "브랜치 전환하기",
-                        "브랜치 병합하기",
-                    ],
-                },
-                relatedConcepts: {
-                    type: "array",
-                    items: {type: "string"},
-                    description: "관련된 Git 개념들",
-                    example: ["커밋", "병합", "충돌 해결"],
-                },
+                statusCode: { type: "number", example: 400 },
+                message: { type: "string", example: "question should not be empty" },
+                error: { type: "string", example: "Bad Request" },
             },
         },
     })
-    @ApiBody({
+    @ApiResponse({
+        status: 401,
+        description: "인증 실패 (로그인 필요)",
         schema: {
             type: "object",
             properties: {
-                question: {
-                    type: "string",
-                    example: "브랜치가 뭔가요?",
-                    description: "Git에 대한 질문",
-                },
+                statusCode: { type: "number", example: 401 },
+                message: { type: "string", example: "Unauthorized" },
             },
-            required: ["question"],
+        },
+    })
+    @ApiResponse({
+        status: 404,
+        description: "저장소를 찾을 수 없음",
+        schema: {
+            type: "object",
+            properties: {
+                statusCode: { type: "number", example: 404 },
+                message: { type: "string", example: "Repository not found" },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 500,
+        description: "AI 서비스 오류 (API 키 미설정 등)",
+        schema: {
+            type: "object",
+            properties: {
+                statusCode: { type: "number", example: 500 },
+                message: { type: "string", example: "AI assistant is not available. CLAUDE_API_KEY is not configured." },
+            },
         },
     })
     @Post(":repoId/ai/ask")
@@ -107,7 +119,7 @@ export class AIAssistantController extends BaseRepoService {
     async askQuestion(
         @Param("repoId") repoId: string,
         @AuthUser() user: User,
-        @Body() body: { question: string },
+        @Body() body: AskQuestionDto,
     ) {
         const gitContext = await this.getGitContext(repoId, user.id);
         const response = await this.aiAssistant.answerQuestion(
@@ -138,33 +150,46 @@ export class AIAssistantController extends BaseRepoService {
 - "충돌을 먼저 해결하세요"
 - "작업이 완료되었으니 Pull Request를 생성하세요"`,
     })
+    @ApiParam({
+        name: "repoId",
+        description: "저장소 ID (UUID)",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
     @ApiResponse({
         status: 200,
         description: "제안 생성 성공",
+        type: AIAssistantResponseDto,
+    })
+    @ApiResponse({
+        status: 401,
+        description: "인증 실패 (로그인 필요)",
         schema: {
             type: "object",
             properties: {
-                answer: {
-                    type: "string",
-                    description: "현재 상태 요약 및 제안",
-                    example:
-                        "현재 3개 파일이 수정되었지만 아직 커밋되지 않았습니다. 작업 내용을 저장하기 위해 커밋을 하는 것이 좋습니다...",
-                },
-                suggestedActions: {
-                    type: "array",
-                    items: {type: "string"},
-                    description: "우선순위 순으로 정렬된 할 일",
-                    example: [
-                        "변경된 파일을 스테이징 영역에 추가하기",
-                        "의미있는 커밋 메시지 작성하기",
-                        "커밋 실행하기",
-                    ],
-                },
-                relatedConcepts: {
-                    type: "array",
-                    items: {type: "string"},
-                    example: ["커밋", "스테이징", "Push"],
-                },
+                statusCode: { type: "number", example: 401 },
+                message: { type: "string", example: "Unauthorized" },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 404,
+        description: "저장소를 찾을 수 없음",
+        schema: {
+            type: "object",
+            properties: {
+                statusCode: { type: "number", example: 404 },
+                message: { type: "string", example: "Repository not found" },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 500,
+        description: "AI 서비스 오류 (API 키 미설정 등)",
+        schema: {
+            type: "object",
+            properties: {
+                statusCode: { type: "number", example: 500 },
+                message: { type: "string", example: "AI assistant is not available. CLAUDE_API_KEY is not configured." },
             },
         },
     })

@@ -301,6 +301,11 @@ CONFIDENCE: [0-100 숫자만]
    * AI 응답을 파싱하여 구조화된 결과로 변환합니다
    */
   private parseResponse(text: string, originalConflict: string): AIResolutionResult {
+    // 🔍 디버깅: AI 원본 응답 로그 출력
+    this.logger.log("=== AI 원본 응답 시작 ===");
+    this.logger.log(text);
+    this.logger.log("=== AI 원본 응답 끝 ===");
+
     // 코드 블록 추출
     const codeMatch = text.match(
       /MERGED_CODE:\s*```\w*\n([\s\S]*?)\n```/,
@@ -320,6 +325,12 @@ CONFIDENCE: [0-100 숫자만]
       "AI가 충돌을 분석하고 해결 방법을 제시했습니다.";
     const confidenceRaw = parseInt(confidenceMatch?.[1] || "50");
     const confidence = confidenceRaw / 100;
+
+    // 🔍 디버깅: 파싱 결과 로그 출력
+    this.logger.log(`파싱된 코드 길이: ${resolvedCode.length}자`);
+    this.logger.log(`파싱된 설명 길이: ${explanation.length}자`);
+    this.logger.log(`파싱된 설명 내용: ${explanation.slice(0, 200)}...`);
+    this.logger.log(`신뢰도: ${confidenceRaw}%`);
 
     if (!resolvedCode) {
       throw new Error("AI가 유효한 해결 코드를 생성하지 못했습니다");
