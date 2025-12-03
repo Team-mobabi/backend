@@ -30,7 +30,7 @@ export class User {
 
   @ApiHideProperty()
   @Exclude()
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   refreshToken?: string | null;
 
   @ApiProperty({
