@@ -31,7 +31,7 @@ export class User {
   @ApiHideProperty()
   @Exclude()
   @Column({ nullable: true })
-  refreshToken?: string;
+  refreshToken?: string | null;
 
   @ApiProperty({
     description: "계정 생성일",

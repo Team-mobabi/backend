@@ -74,7 +74,7 @@ export class UsersService {
     return { message: "회원 탈퇴가 완료되었습니다." };
   }
 
-  async updateRefreshToken(userId: string, refreshToken: string | undefined): Promise<void> {
+  async updateRefreshToken(userId: string, refreshToken: string | null | undefined): Promise<void> {
     // undefined를 null로 변환 (TypeORM은 undefined를 처리하지 못함)
     await this.usersRepository.update(userId, { refreshToken: refreshToken ?? null });
   }
