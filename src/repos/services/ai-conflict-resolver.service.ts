@@ -99,8 +99,8 @@ export class AIConflictResolverService {
 
     const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
-      temperature: 0.1, // 더 낮은 온도로 일관성 향상
+      max_tokens: 16384, // Claude Sonnet 최대 출력 토큰 (넉넉하게 설정)
+      temperature: 0.1,
       messages: [
         {
           role: "user",
@@ -111,6 +111,12 @@ export class AIConflictResolverService {
 
     const firstContent = message.content[0];
     const responseText = firstContent.type === 'text' ? firstContent.text : '';
+
+    // 응답이 잘렸는지 확인
+    if (message.stop_reason === 'max_tokens') {
+      this.logger.warn('⚠️ AI 응답이 max_tokens로 인해 잘렸습니다!');
+    }
+
     return this.parseResponse(responseText, conflictContent);
   }
 
@@ -165,17 +171,16 @@ export class AIConflictResolverService {
 - Their Commit Message: "${context.theirCommitMessage || 'N/A'}"
 ` : '';
 
-    return `You are an expert Git merge conflict resolver. Your task is to analyze merge conflicts and provide the optimal resolution.
+    return `You are an expert Git merge conflict resolver.
 
-**File Information:**
-- Path: ${filePath}
-- Language: ${language}
-- Extension: .${fileExtension}
+**CRITICAL: You MUST include all three sections: MERGED_CODE, EXPLANATION, and CONFIDENCE**
+
+**File:** ${filePath} (${language})
 ${contextInfo}
 
 ---
 
-## Few-Shot Examples (학습 참고용)
+## Quick Examples
 
 ### Example 1: Simple Value Conflict (High Confidence)
 **Input:**
