@@ -37,10 +37,12 @@ export class AIConflictResolverService {
 
     if (!apiKey) {
       this.logger.warn("CLAUDE_API_KEY is not configured. AI conflict resolution will not be available.");
-      
+
     } else {
       this.anthropic = new Anthropic({
         apiKey,
+        timeout: 180000, // 180초 (큰 파일 처리를 위해 충분한 시간 제공)
+        maxRetries: 2, // API 레벨에서 재시도
       });
     }
   }

@@ -159,6 +159,14 @@ export class BranchService extends BaseRepoService {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
+      // 먼저 현재 상태 확인 - 이미 merge 중인지 또는 해결되지 않은 충돌이 있는지
+      const status = await git.status();
+      if (status.conflicted && status.conflicted.length > 0) {
+        throw new ConflictException(
+          `이미 해결되지 않은 충돌이 있습니다. 충돌을 먼저 해결하거나 merge를 중단하세요. 충돌 파일: ${status.conflicted.join(", ")}`
+        );
+      }
+
       const currentBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
       const finalTargetBranch = targetBranch || currentBranch;
 
