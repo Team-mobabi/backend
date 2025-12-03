@@ -44,16 +44,19 @@ export abstract class BaseRepoService {
     }
 
     if (repo.ownerId !== userId) {
-      const collaborator = await this.collaboratorRepository.findOne({
-        where: { repoId, userId },
-      });
+      if (!repo.isPrivate && requiredRole === CollaboratorRole.READ) {
+      } else {
+        const collaborator = await this.collaboratorRepository.findOne({
+          where: { repoId, userId },
+        });
 
-      if (!collaborator) {
-        throw new RepoAccessDeniedException(repoId);
-      }
+        if (!collaborator) {
+          throw new RepoAccessDeniedException(repoId);
+        }
 
-      if (!this.hasRequiredRole(collaborator.role, requiredRole)) {
-        throw new RepoAccessDeniedException(repoId);
+        if (!this.hasRequiredRole(collaborator.role, requiredRole)) {
+          throw new RepoAccessDeniedException(repoId);
+        }
       }
     }
 
