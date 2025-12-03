@@ -313,27 +313,31 @@ CONFIDENCE: [0-100 숫자만]
     this.logger.log(text);
     this.logger.log("=== AI 원본 응답 끝 ===");
 
-    // 코드 블록 추출
+    const removeMarkdownBullets = (text: string): string => {
+      if (!text) return text;
+      return text.replace(/^[*-]\s+/gm, '');
+    };
+
     const codeMatch = text.match(
       /MERGED_CODE:\s*```\w*\n([\s\S]*?)\n```/,
     );
 
-    // 설명 추출
     const explanationMatch = text.match(
       /EXPLANATION:\s*([\s\S]*?)(?:\n\nCONFIDENCE:|\nCONFIDENCE:|$)/,
     );
 
-    // 신뢰도 추출
     const confidenceMatch = text.match(/CONFIDENCE:\s*(\d+)/);
 
     const resolvedCode = codeMatch?.[1]?.trim() || "";
-    const explanation =
+    const rawExplanation =
       explanationMatch?.[1]?.trim() ||
       "AI가 충돌을 분석하고 해결 방법을 제시했습니다.";
+
+    const explanation = removeMarkdownBullets(rawExplanation);
+
     const confidenceRaw = parseInt(confidenceMatch?.[1] || "50");
     const confidence = confidenceRaw / 100;
 
-    // 🔍 디버깅: 파싱 결과 로그 출력
     this.logger.log(`파싱된 코드 길이: ${resolvedCode.length}자`);
     this.logger.log(`파싱된 설명 길이: ${explanation.length}자`);
     this.logger.log(`파싱된 설명 내용: ${explanation.slice(0, 200)}...`);

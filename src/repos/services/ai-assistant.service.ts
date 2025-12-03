@@ -236,9 +236,17 @@ RELATED_CONCEPTS:
 
     const conceptsMatch = text.match(/RELATED_CONCEPTS:\s*([\s\S]*?)$/);
 
-    const answer =
+    const removeMarkdownBullets = (text: string): string => {
+      if (!text) return text;
+      return text.replace(/^[*-]\s+/gm, '');
+    };
+
+    const rawAnswer =
       answerMatch?.[1]?.trim() ||
       "죄송합니다. 답변을 생성하는 데 문제가 있었습니다. 다시 시도해주세요.";
+
+    // answer에서 불릿 마크 제거
+    const answer = removeMarkdownBullets(rawAnswer);
 
     const parseList = (listText: string): string[] => {
       if (!listText) return [];
