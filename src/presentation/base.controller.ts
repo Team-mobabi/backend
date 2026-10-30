@@ -28,16 +28,66 @@ const STATUS_BY_TAG: Record<Exclude<AppError["_tag"], "ApiError">, number> = {
 export const statusOf = (error: AppError): number =>
   error._tag === "ApiError" ? error.status : STATUS_BY_TAG[error._tag];
 
+/** Effect 실행 후 실패를 HttpException으로 변환. BaseController로 옮기기 전의 컨트롤러에서도 사용 */
+export const runAppEffect = <A>(
+  effect: Effect.Effect<A, AppError>,
+  logger: Logger,
+): Promise<A> =>
+  Effect.runPromise(Effect.either(effect)).then((result) => {
+    if (Either.isRight(result)) {
+      return result.right;
+    }
+    throw toHttpException(result.left, logger);
+  });
+
+const toHttpException = (error: AppError, logger: Logger): HttpException => {
+  const status = statusOf(error);
+
+  if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    const cause = "originalError" in error ? error.originalError : undefined;
+    logger.error(`[${error._tag}] ${error.message}`, cause);
+  } else {
+    logger.warn(`[${error._tag}] ${error.message}`);
+  }
+
+  // 기존 Nest 내장 예외와 동일한 응답 형태 유지 (프론트 호환)
+  return new HttpException(
+    {
+      statusCode: status,
+      message: error.message,
+      error: STATUS_CODES[status] ?? "Error",
+    },
+    status,
+  );
+};
+
+type Issue = ParseResult.ArrayFormatterIssue;
+
+/**
+ * optional/union은 분기마다 "Expected ..." 이슈를 만들어 메시지가 장황해진다.
+ * 같은 필드에 스키마가 정의한 메시지(filter 등)가 있으면 그것만 남긴다.
+ */
+const readableIssues = (issues: readonly Issue[]): string[] => {
+  const keyOf = (issue: Issue) => issue.path.join(".");
+  const isGeneric = (issue: Issue) => issue.message.startsWith("Expected ");
+  const customKeys = new Set(
+    issues.filter((issue) => !isGeneric(issue)).map(keyOf),
+  );
+  const messages = issues
+    .filter((issue) => !(isGeneric(issue) && customKeys.has(keyOf(issue))))
+    .map((issue) =>
+      issue.path.length > 0
+        ? `${keyOf(issue)}: ${issue.message}`
+        : issue.message,
+    );
+  return [...new Set(messages)];
+};
+
 export abstract class BaseController {
   protected abstract readonly logger: Logger;
 
   protected runEffect<A>(effect: Effect.Effect<A, AppError>): Promise<A> {
-    return Effect.runPromise(Effect.either(effect)).then((result) => {
-      if (Either.isRight(result)) {
-        return result.right;
-      }
-      throw this.toHttpException(result.left);
-    });
+    return runAppEffect(effect, this.logger);
   }
 
   /** Effect Schema 디코딩 — 실패 시 필드별 메시지를 담아 400 */
@@ -46,34 +96,9 @@ export abstract class BaseController {
     if (Either.isRight(result)) {
       return result.right;
     }
-    const messages = ParseResult.ArrayFormatter.formatErrorSync(
-      result.left,
-    ).map((issue) =>
-      issue.path.length > 0
-        ? `${issue.path.join(".")}: ${issue.message}`
-        : issue.message,
+    const messages = readableIssues(
+      ParseResult.ArrayFormatter.formatErrorSync(result.left),
     );
     throw new BadRequestException(messages);
-  }
-
-  private toHttpException(error: AppError): HttpException {
-    const status = statusOf(error);
-
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-      const cause = "originalError" in error ? error.originalError : undefined;
-      this.logger.error(`[${error._tag}] ${error.message}`, cause);
-    } else {
-      this.logger.warn(`[${error._tag}] ${error.message}`);
-    }
-
-    // 기존 Nest 내장 예외와 동일한 응답 형태 유지 (프론트 호환)
-    return new HttpException(
-      {
-        statusCode: status,
-        message: error.message,
-        error: STATUS_CODES[status] ?? "Error",
-      },
-      status,
-    );
   }
 }

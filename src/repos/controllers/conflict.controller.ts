@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpException,
   HttpStatus,
+  Logger,
   Param,
   Post,
   UseGuards,
@@ -16,10 +17,13 @@ import {
   ApiBearerAuth,
   ApiBody,
 } from "@nestjs/swagger";
+import { Either, Schema } from "effect";
 import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
 import { GitConflictService } from "@src/repos/services/git-conflict.service";
 import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
-import { FileService } from "@src/repos/services/file.service";
+import { FileService } from "@src/application/file/file.service";
+import { RepoPathSchema } from "@src/domain/file/repo-path";
+import { runAppEffect } from "@src/presentation/base.controller";
 import { User } from "@src/users/entities/user.entity";
 import { AuthUser } from "@src/repos/auth-user.decorator";
 
@@ -28,6 +32,8 @@ import { AuthUser } from "@src/repos/auth-user.decorator";
 @Controller("repos")
 @UseGuards(JwtAuthGuard)
 export class ConflictController {
+  private readonly logger = new Logger(ConflictController.name);
+
   constructor(
     private readonly gitConflictService: GitConflictService,
     private readonly aiConflictResolver: AIConflictResolverService,
@@ -247,17 +253,16 @@ export class ConflictController {
     @Body() body: { filePath: string },
   ) {
     // 1. 충돌 파일 내용 읽기
-    const fileContent = await this.fileService.browseFiles(
-      repoId,
-      user.id,
-      body.filePath,
+    const filePath = Schema.decodeUnknownEither(RepoPathSchema)(body.filePath);
+    if (Either.isLeft(filePath)) {
+      throw new HttpException("잘못된 파일 경로입니다", HttpStatus.BAD_REQUEST);
+    }
+    const fileContent = await runAppEffect(
+      this.fileService.browse(repoId, user.id, filePath.right),
+      this.logger,
     );
-
-    // browseFiles의 반환 타입에 따라 처리
     const conflictContent =
-      typeof fileContent === "string"
-        ? fileContent
-        : (fileContent as any).content || JSON.stringify(fileContent);
+      fileContent.type === "file" ? fileContent.content : "";
 
     // 2. 충돌 마커 확인
     if (!conflictContent.includes("<<<<<<< HEAD")) {

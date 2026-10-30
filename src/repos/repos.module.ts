@@ -4,7 +4,6 @@ import { ReposController } from "@src/repos/controllers/repos.controller";
 import { GitController } from "@src/repos/controllers/git.controller";
 import { BranchController } from "@src/repos/controllers/branch.controller";
 import { PullRequestController } from "@src/repos/controllers/pull-request.controller";
-import { FileController } from "@src/repos/controllers/file.controller";
 import { ConflictController } from "@src/repos/controllers/conflict.controller";
 import { DiffController } from "@src/repos/controllers/diff.controller";
 import { CollaboratorController } from "@src/repos/controllers/collaborator.controller";
@@ -13,7 +12,7 @@ import { GitRemoteService } from "@src/repos/services/git-remote/git-remote.serv
 import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { BranchService } from "@src/repos/services/branch/branch.service";
 import { PullRequestService } from "@src/repos/services/pull-request.service";
-import { FileService } from "@src/repos/services/file.service";
+import { FileModule } from "@src/presentation/file/file.module";
 import { GitConflictService } from "@src/repos/services/git-conflict.service";
 import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
 import { AIAssistantService } from "@src/repos/services/ai-assistant.service";
@@ -27,6 +26,7 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 
 @Module({
   imports: [
+    FileModule,
     TypeOrmModule.forFeature([Repo, PullRequest, PrReview, RepoCollaborator]),
   ],
   controllers: [
@@ -34,7 +34,6 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
     GitController,
     BranchController,
     PullRequestController,
-    FileController,
     ConflictController,
     DiffController,
     CollaboratorController,
@@ -46,7 +45,6 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
     GitOperationService,
     BranchService,
     PullRequestService,
-    FileService,
     GitConflictService,
     AIConflictResolverService,
     AIAssistantService,

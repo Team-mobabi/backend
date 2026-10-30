@@ -131,4 +131,26 @@ describe("BaseController.decode", () => {
       expect(response.message[1]).toMatch(/^age: /);
     }
   });
+
+  it("optional 필드는 스키마가 정의한 메시지만 남긴다", () => {
+    const controller = new TestController();
+    const Query = Schema.Struct({
+      path: Schema.optional(
+        Schema.String.pipe(
+          Schema.filter((value) =>
+            value.startsWith("..") ? "밖으로 나갈 수 없습니다" : undefined,
+          ),
+        ),
+      ),
+    });
+    try {
+      controller.parse(Query, { path: "../x" });
+      expect.unreachable();
+    } catch (error) {
+      const response = (error as BadRequestException).getResponse() as {
+        message: string[];
+      };
+      expect(response.message).toEqual(["path: 밖으로 나갈 수 없습니다"]);
+    }
+  });
 });
