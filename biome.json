@@ -1,10 +1,15 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
-  "organizeImports": {
-    "enabled": true
+  "$schema": "https://biomejs.dev/schemas/2.2.6/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
   },
   "files": {
-    "include": ["src/**/*.ts", "test/**/*.ts"]
+    "includes": [
+      "src/**/*.ts",
+      "*.ts"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -17,29 +22,67 @@
     "enabled": true,
     "rules": {
       "recommended": true,
-      "style": {
-        "useConst": "error",
-        "useImportType": "off",
-        "useNodejsImportProtocol": "error",
-        "useShorthandFunctionType": "off"
+      "complexity": {
+        "noStaticOnlyClass": "off",
+        "noUselessConstructor": "off"
       },
       "suspicious": {
-        "noConsoleLog": "error"
+        "noConsole": "error"
       }
     }
   },
   "javascript": {
     "formatter": {
-      "arrowParentheses": "always",
-      "attributePosition": "multiline",
-      "bracketSameLine": false,
-      "semicolons": "always",
-      "trailingCommas": "all",
       "quoteStyle": "double",
-      "quoteProperties": "preserve"
+      "semicolons": "always",
+      "trailingCommas": "all"
     },
     "parser": {
       "unsafeParameterDecoratorsEnabled": true
     }
-  }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": [
+        "**/*.service.ts",
+        "**/*.controller.ts",
+        "**/*.module.ts",
+        "**/*.repository.ts",
+        "**/*.client.ts",
+        "**/*.strategy.ts",
+        "**/*.guard.ts",
+        "**/*.decorator.ts",
+        "**/*.dto.ts",
+        "**/*.entity.ts",
+        "src/main.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useImportType": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/application/ai/evaluation/**"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ]
 }
