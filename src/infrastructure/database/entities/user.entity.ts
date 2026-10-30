@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from "typeorm";
 import { ApiProperty, ApiHideProperty } from "@nestjs/swagger";
 
@@ -26,9 +27,11 @@ export class User {
   @Column()
   passwordHash: string;
 
+  /** refresh 토큰의 SHA-256 hex. 원문은 저장하지 않는다 */
   @ApiHideProperty()
-  @Column({ type: "text", nullable: true })
-  refreshToken?: string | null;
+  @Index()
+  @Column({ type: "varchar", length: 64, nullable: true })
+  refreshTokenHash?: string | null;
 
   @ApiProperty({
     description: "계정 생성일",

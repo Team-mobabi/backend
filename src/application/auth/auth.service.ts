@@ -23,6 +23,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "@src/infrastructure/auth/password";
+import { hashRefreshToken } from "@src/infrastructure/auth/refresh-token";
 import { UserRepository } from "@src/infrastructure/repositories/user.repository";
 
 type Ttl = JwtSignOptions["expiresIn"];
@@ -90,9 +91,9 @@ export class AuthService {
         accessToken: this.sign(account, "access", ACCESS_TOKEN_TTL),
         refreshToken: this.sign(account, "refresh", REFRESH_TOKEN_TTL),
       };
-      yield* this.userRepository.setRefreshToken(
+      yield* this.userRepository.setRefreshTokenHash(
         account.id,
-        tokens.refreshToken,
+        hashRefreshToken(tokens.refreshToken),
       );
       return tokens;
     });
@@ -105,7 +106,7 @@ export class AuthService {
       const payload = yield* this.verify(refreshToken);
       // 로그아웃 등으로 서버에서 폐기된 토큰인지 확인
       const user = yield* this.userRepository
-        .findByRefreshToken(refreshToken)
+        .findByRefreshTokenHash(hashRefreshToken(refreshToken))
         .pipe(getOrFail(invalidRefreshToken));
       if (user.id !== payload.sub) {
         return yield* invalidRefreshToken();
@@ -116,7 +117,7 @@ export class AuthService {
 
   logout(userId: string): Effect.Effect<Message, DbError> {
     return this.userRepository
-      .setRefreshToken(userId, null)
+      .setRefreshTokenHash(userId, null)
       .pipe(Effect.as({ message: "로그아웃되었습니다." }));
   }
 

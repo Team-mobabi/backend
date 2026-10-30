@@ -28,7 +28,7 @@ describe("UserRepository.searchByEmail", () => {
           email: "a@b.com",
           createdAt: new Date(),
           passwordHash: "hash",
-          refreshToken: "token",
+          refreshTokenHash: "hash",
         },
       ],
     } as unknown as Repository<UserEntity>);

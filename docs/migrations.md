@@ -62,3 +62,9 @@ TypeORM CLI는 Bun으로 실행하며 `src/data-source.ts`(엔티티 목록은
 
 마이그레이션 CLI는 `src/migrations/*.ts`를 Bun으로 직접 읽으므로 소스가 있는 위치에서
 실행한다. 새 코드를 띄우기 **전에** `bun run migration:run`을 실행한다.
+
+## 배포 시 주의가 필요한 마이그레이션
+
+- `HashRefreshTokens1793334070792`: refresh 토큰을 SHA-256 해시로만 저장하도록 바꾸면서
+  기존에 저장된 토큰을 모두 버린다. 적용 직후 기존 refresh 토큰은 모두 거부되므로,
+  로그인해 있던 사용자는 access 토큰(1시간)이 만료되면 다시 로그인해야 한다.

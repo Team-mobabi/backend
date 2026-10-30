@@ -48,12 +48,12 @@ export class UserRepository extends BaseRepository {
     );
   }
 
-  findByRefreshToken(
-    refreshToken: string,
+  findByRefreshTokenHash(
+    refreshTokenHash: string,
   ): Effect.Effect<Option.Option<User>, DbError> {
     return this.findOne(
       UserSchema,
-      { refreshToken },
+      { refreshTokenHash },
       "Refresh Token 조회에 실패했습니다",
     );
   }
@@ -93,12 +93,12 @@ export class UserRepository extends BaseRepository {
     ).pipe(Effect.asVoid);
   }
 
-  setRefreshToken(
+  setRefreshTokenHash(
     id: string,
-    refreshToken: string | null,
+    refreshTokenHash: string | null,
   ): Effect.Effect<void, DbError> {
     return this.query(
-      () => this.users.update(id, { refreshToken }),
+      () => this.users.update(id, { refreshTokenHash }),
       "Refresh Token 저장에 실패했습니다",
     ).pipe(Effect.asVoid);
   }
