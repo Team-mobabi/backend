@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Effect } from "effect";
-import type { DefaultLogFields } from "simple-git";
+import type { DefaultLogFields, SimpleGit } from "simple-git";
 import {
   type RepoWorkspace,
   RepoWorkspaceService,
@@ -13,18 +13,23 @@ import {
   parseLog,
 } from "@src/domain/git/commit-graph";
 import type { MergeBranchBody, MergeResult } from "@src/domain/git/git";
+import type { User } from "@src/domain/user/user";
 import {
   currentBranch,
   headHash,
   recoverGit,
   tryGit,
 } from "@src/infrastructure/git/git";
+import { RepoStorageService } from "@src/infrastructure/git/repo-storage.service";
 
 const REMOTE_PREFIX = "remotes/origin/";
 
 @Injectable()
 export class BranchService {
-  constructor(private readonly workspaces: RepoWorkspaceService) {}
+  constructor(
+    private readonly workspaces: RepoWorkspaceService,
+    private readonly storage: RepoStorageService,
+  ) {}
 
   list(repoId: string, userId: string, limit: number) {
     return this.withGit(repoId, userId, ({ git }) =>
@@ -216,6 +221,110 @@ export class BranchService {
           conflictFiles: after.conflicted,
         };
       }),
+    );
+  }
+
+  /**
+   * 공유 원격의 source를 target에 --no-ff로 병합하고 target을 원격에 push한다.
+   * 병합자의 작업 사본 대신 원격의 임시 clone에서 수행하므로 병합자가 source 브랜치를
+   * 로컬에 갖고 있지 않아도 되고, 충돌 시에는 아무것도 push하지 않아 원격이 반쯤 병합된 상태로 남지 않는다.
+   */
+  mergeOnRemote(
+    repoId: string,
+    merger: User,
+    body: {
+      readonly sourceBranch: string;
+      readonly targetBranch: string;
+      readonly fastForwardOnly: boolean;
+    },
+  ): Effect.Effect<MergeResult, WorkspaceError> {
+    const { sourceBranch, targetBranch } = body;
+    const refNotFound = (name: string) =>
+      new GitRefNotFoundError({
+        message: `Branch '${name}' does not exist on the remote.`,
+        ref: name,
+      });
+    const verify = (git: SimpleGit, name: string) =>
+      tryGit("rev-parse", () =>
+        git.raw(["rev-parse", "--verify", `refs/remotes/origin/${name}`]),
+      ).pipe(Effect.mapError(() => refNotFound(name)));
+
+    return this.workspaces.authorize(repoId, merger.id, "write").pipe(
+      Effect.zipRight(
+        body.fastForwardOnly
+          ? Effect.fail(
+              new GitConflictError({
+                message:
+                  "Fast-forward merge is not allowed. Use 3-way merge only.",
+              }),
+            )
+          : Effect.void,
+      ),
+      Effect.zipRight(
+        this.storage.withScratchClone(repoId, (git) =>
+          Effect.gen(function* () {
+            yield* verify(git, sourceBranch);
+            yield* verify(git, targetBranch);
+            yield* tryGit("checkout", () =>
+              git.checkout(["-B", targetBranch, `origin/${targetBranch}`]),
+            );
+            const from = yield* headHash(git);
+
+            // 임시 clone이므로 병합 커밋 작성자를 로컬 설정으로 지정해도 남지 않는다
+            const name = merger.email.split("@")[0] || "Unknown";
+            yield* tryGit("config", () => git.addConfig("user.name", name));
+            yield* tryGit("config", () =>
+              git.addConfig("user.email", merger.email),
+            );
+            // raw()는 충돌(stdout만 출력)을 실패로 보지 않으므로 merge()를 써야 한다
+            yield* tryGit("merge", () =>
+              git.merge([
+                "--no-ff",
+                "-m",
+                `Merge branch '${sourceBranch}' into ${targetBranch}`,
+                `origin/${sourceBranch}`,
+              ]),
+            ).pipe(
+              recoverGit((message) =>
+                /merge conflict|CONFLICT/i.test(message)
+                  ? new GitConflictError({
+                      message:
+                        "Merge conflict detected. Resolve conflicts in the source branch and push again.",
+                    })
+                  : undefined,
+              ),
+            );
+            const to = yield* headHash(git);
+
+            if (to !== from) {
+              yield* tryGit("push", () =>
+                git.push("origin", `HEAD:refs/heads/${targetBranch}`),
+              ).pipe(
+                // 병합하는 사이 다른 사용자가 target을 갱신한 경우
+                recoverGit((message) =>
+                  /rejected|non-fast-forward|fetch first/i.test(message)
+                    ? new GitConflictError({
+                        message: `Target branch '${targetBranch}' was updated during the merge. Please try again.`,
+                      })
+                    : undefined,
+                ),
+              );
+            }
+
+            return {
+              success: true as const,
+              // 기존 API 호환: target이 움직였는지 여부
+              fastForward: from !== to,
+              from,
+              to,
+              sourceBranch,
+              targetBranch,
+              hasConflict: false,
+              conflictFiles: [],
+            };
+          }),
+        ),
+      ),
     );
   }
 

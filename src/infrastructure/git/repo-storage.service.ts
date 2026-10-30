@@ -1,10 +1,15 @@
 import { promises as fs } from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Effect } from "effect";
-import simpleGit from "simple-git";
-import type { FileError, GitError } from "@src/common/error";
+import simpleGit, { type SimpleGit } from "simple-git";
+import {
+  type FileError,
+  FileSystemError,
+  type GitError,
+} from "@src/common/error";
 import { ensureDir, remove } from "@src/infrastructure/file/file-system";
 import { tryGit } from "./git";
 
@@ -150,6 +155,43 @@ export class RepoStorageService {
       ),
       Effect.zipRight(this.disableSigning(workingCopy)),
       Effect.as(workingCopy),
+    );
+  }
+
+  /**
+   * 공유 원격을 임시 디렉토리에 clone해 작업하고, 성공/실패와 무관하게 삭제한다.
+   * 사용자 작업 사본(현재 브랜치·미커밋 변경·충돌 상태)을 건드리지 않고 원격을 갱신할 때 쓴다.
+   */
+  withScratchClone<A, E>(
+    repoId: string,
+    use: (git: SimpleGit) => Effect.Effect<A, E>,
+  ): Effect.Effect<A, E | GitError | FileError> {
+    return Effect.acquireUseRelease(
+      Effect.tryPromise({
+        try: () => fs.mkdtemp(path.join(os.tmpdir(), "repo-scratch-")),
+        catch: (error) =>
+          new FileSystemError({
+            message: "임시 작업 공간을 만들지 못했습니다",
+            originalError: error,
+          }),
+      }),
+      (dir) =>
+        tryGit("clone", () =>
+          simpleGit().clone(this.remotePath(repoId), dir),
+        ).pipe(
+          Effect.zipRight(this.disableSigning(dir)),
+          Effect.zipRight(Effect.suspend(() => use(simpleGit(dir)))),
+        ),
+      (dir) =>
+        remove(dir, repoId).pipe(
+          Effect.catchAll((error) =>
+            Effect.sync(() =>
+              this.logger.warn(
+                `임시 clone 삭제 실패 (${dir}): ${error.message}`,
+              ),
+            ),
+          ),
+        ),
     );
   }
 

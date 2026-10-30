@@ -26,6 +26,7 @@ import type {
   PullRequestStatus,
   Review,
 } from "@src/domain/pull-request/pull-request";
+import type { User } from "@src/domain/user/user";
 import { tryGit } from "@src/infrastructure/git/git";
 import { PullRequestRepository } from "@src/infrastructure/repositories/pull-request.repository";
 
@@ -115,7 +116,7 @@ export class PullRequestService {
   /** 공유 이력을 바꾸는 작업이므로 write 권한이 필요하다 */
   merge(
     repoId: string,
-    userId: string,
+    merger: User,
     prId: string,
     fastForwardOnly: boolean,
   ): Effect.Effect<
@@ -123,8 +124,8 @@ export class PullRequestService {
     Failure | WorkspaceError
   > {
     return Effect.gen(this, function* () {
-      yield* this.workspaces.authorize(repoId, userId, "write");
-      const pr = yield* this.get(repoId, userId, prId);
+      yield* this.workspaces.authorize(repoId, merger.id, "write");
+      const pr = yield* this.get(repoId, merger.id, prId);
       if (pr.status !== "open") return yield* notOpen();
       if (
         pr.requiresApproval &&
@@ -135,14 +136,15 @@ export class PullRequestService {
         });
       }
 
-      const result = yield* this.branches.merge(repoId, userId, {
+      // 원격 push까지 성공한 뒤에만 PR을 병합 상태로 바꾼다
+      const result = yield* this.branches.mergeOnRemote(repoId, merger, {
         sourceBranch: pr.sourceBranch,
         targetBranch: pr.targetBranch,
         fastForwardOnly,
       });
       const pullRequest = yield* this.pullRequests.markMerged(
         pr,
-        userId,
+        merger.id,
         result.to,
       );
       return { ...result, pullRequest };
