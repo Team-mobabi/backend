@@ -2,6 +2,8 @@ import { Schema } from "effect";
 import { EmailSchema } from "@src/domain/user/user";
 
 export const VERIFICATION_CODE_TTL_MINUTES = 5;
+/** 6자리 코드 무차별 대입 방지: 이 횟수만큼 틀리면 코드를 폐기한다 */
+export const VERIFICATION_MAX_ATTEMPTS = 5;
 
 export const SendVerificationBodySchema = Schema.Struct({
   email: EmailSchema,

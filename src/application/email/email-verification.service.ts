@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { randomInt, timingSafeEqual } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { Effect } from "effect";
 import { getOrFail } from "@src/common/effect";
@@ -9,6 +9,7 @@ import {
 } from "@src/common/error";
 import {
   VERIFICATION_CODE_TTL_MINUTES,
+  VERIFICATION_MAX_ATTEMPTS,
   type VerifyCodeBody,
 } from "@src/domain/email/email";
 import { MailerService } from "@src/infrastructure/email/mailer.service";
@@ -25,6 +26,17 @@ const renderVerificationMail = (code: string): string => `
     <p style="color: #666;">본인이 요청하지 않았다면 이 이메일을 무시해주세요.</p>
   </div>
 `;
+
+const invalidCode = () =>
+  new VerificationCodeError({
+    message: "유효하지 않은 인증 코드입니다. 다시 확인해주세요.",
+  });
+
+const codeMatches = (expected: string, actual: string): boolean => {
+  const a = Buffer.from(expected);
+  const b = Buffer.from(actual);
+  return a.length === b.length && timingSafeEqual(a, b);
+};
 
 @Injectable()
 export class EmailVerificationService {
@@ -58,23 +70,29 @@ export class EmailVerificationService {
     code,
   }: VerifyCodeBody): Effect.Effect<void, DbError | VerificationCodeError> {
     const now = new Date();
-    return this.verificationRepository.findPending(email, code).pipe(
-      getOrFail(
-        () =>
-          new VerificationCodeError({
-            message: "유효하지 않은 인증 코드입니다. 다시 확인해주세요.",
-          }),
-      ),
-      Effect.filterOrFail(
-        (pending) => pending.expiresAt >= now,
-        () =>
-          new VerificationCodeError({
-            message: "인증 코드가 만료되었습니다. 새로운 코드를 요청해주세요.",
-          }),
-      ),
-      Effect.flatMap((pending) =>
-        this.verificationRepository.markVerified(pending.id),
-      ),
+    return Effect.gen(this, function* () {
+      // 비교 전에 시도 횟수부터 차감해야 동시 요청으로 한도를 우회할 수 없다
+      const pending = yield* this.verificationRepository
+        .consumeAttempt(email, VERIFICATION_MAX_ATTEMPTS)
+        .pipe(getOrFail(invalidCode));
+
+      if (!codeMatches(pending.code, code)) {
+        if (pending.attempts >= VERIFICATION_MAX_ATTEMPTS) {
+          yield* this.verificationRepository.deleteById(pending.id);
+          return yield* new VerificationCodeError({
+            message:
+              "인증 시도 횟수를 초과했습니다. 새로운 코드를 요청해주세요.",
+          });
+        }
+        return yield* invalidCode();
+      }
+      if (pending.expiresAt < now) {
+        return yield* new VerificationCodeError({
+          message: "인증 코드가 만료되었습니다. 새로운 코드를 요청해주세요.",
+        });
+      }
+      yield* this.verificationRepository.markVerified(pending.id);
+    }).pipe(
       Effect.ensuring(
         this.verificationRepository.deleteExpired(now).pipe(Effect.ignore),
       ),
