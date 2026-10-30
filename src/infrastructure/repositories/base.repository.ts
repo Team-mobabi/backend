@@ -26,7 +26,7 @@ export abstract class BaseRepository {
         (issue) =>
           new DbValidationError({
             message: "DB 데이터가 도메인 모델과 일치하지 않습니다",
-            details: issue.message,
+            issue: issue.message,
           }),
       ),
     );

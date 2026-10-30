@@ -1,12 +1,7 @@
 import { Module } from "@nestjs/common";
-import { GitController } from "@src/repos/controllers/git.controller";
-import { BranchController } from "@src/repos/controllers/branch.controller";
 import { PullRequestController } from "@src/repos/controllers/pull-request.controller";
 import { ConflictController } from "@src/repos/controllers/conflict.controller";
-import { DiffController } from "@src/repos/controllers/diff.controller";
 import { AIAssistantController } from "@src/repos/controllers/ai-assistant.controller";
-import { GitRemoteService } from "@src/repos/services/git-remote/git-remote.service";
-import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { BranchService } from "@src/repos/services/branch/branch.service";
 import { PullRequestService } from "@src/repos/services/pull-request.service";
 import { FileModule } from "@src/presentation/file/file.module";
@@ -26,16 +21,11 @@ import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-col
     TypeOrmModule.forFeature([Repo, PullRequest, PrReview, RepoCollaborator]),
   ],
   controllers: [
-    GitController,
-    BranchController,
     PullRequestController,
     ConflictController,
-    DiffController,
     AIAssistantController,
   ],
   providers: [
-    GitRemoteService,
-    GitOperationService,
     BranchService,
     PullRequestService,
     GitConflictService,

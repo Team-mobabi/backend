@@ -7,7 +7,7 @@ export class DbQueryError extends Data.TaggedError("DbQueryError")<{
 
 export class DbValidationError extends Data.TaggedError("DbValidationError")<{
   message: string;
-  details?: string;
+  issue?: string;
 }> {}
 
 export type DbError = DbQueryError | DbValidationError;

@@ -19,6 +19,7 @@ const STATUS_BY_TAG: Record<Exclude<AppError["_tag"], "ApiError">, number> = {
   GitOperationError: HttpStatus.INTERNAL_SERVER_ERROR,
   GitConflictError: HttpStatus.CONFLICT,
   GitRefNotFoundError: HttpStatus.NOT_FOUND,
+  GitPreconditionError: HttpStatus.BAD_REQUEST,
   DbQueryError: HttpStatus.INTERNAL_SERVER_ERROR,
   DbValidationError: HttpStatus.INTERNAL_SERVER_ERROR,
   AiUnavailableError: HttpStatus.SERVICE_UNAVAILABLE,
@@ -62,11 +63,14 @@ const toHttpException = (error: AppError, logger: Logger): HttpException => {
   }
 
   // 기존 Nest 내장 예외와 동일한 응답 형태 유지 (프론트 호환)
+  const details: Readonly<Record<string, unknown>> | undefined =
+    "details" in error ? error.details : undefined;
   return new HttpException(
     {
       statusCode: status,
       message: error.message,
       error: STATUS_CODES[status] ?? "Error",
+      ...details,
     },
     status,
   );
