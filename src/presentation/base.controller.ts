@@ -31,6 +31,8 @@ const STATUS_BY_TAG: Record<Exclude<AppError["_tag"], "ApiError">, number> = {
   UserNotFoundError: HttpStatus.NOT_FOUND,
   CollaboratorConflictError: HttpStatus.CONFLICT,
   CollaboratorNotFoundError: HttpStatus.NOT_FOUND,
+  PullRequestNotFoundError: HttpStatus.NOT_FOUND,
+  PullRequestConflictError: HttpStatus.CONFLICT,
   VerificationCodeError: HttpStatus.BAD_REQUEST,
   // 기존 API와 동일하게 400 유지 (프론트 호환)
   EmailDeliveryError: HttpStatus.BAD_REQUEST,

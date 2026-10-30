@@ -11,6 +11,7 @@ import { EmailModule } from "@src/presentation/email/email.module";
 import { FileModule } from "@src/presentation/file/file.module";
 import { RepoModule } from "@src/presentation/repo/repo.module";
 import { GitModule } from "@src/presentation/git/git.module";
+import { PullRequestModule } from "@src/presentation/pull-request/pull-request.module";
 
 import { Repo } from "@src/infrastructure/database/entities/repo.entity";
 import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
@@ -53,6 +54,7 @@ import { EmailVerification } from "@src/infrastructure/database/entities/email-v
     FileModule,
     RepoModule,
     GitModule,
+    PullRequestModule,
   ],
 })
 export class AppModule {}

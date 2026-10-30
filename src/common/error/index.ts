@@ -6,6 +6,7 @@ import type { EmailError } from "./email.error";
 import type { FileError } from "./file.error";
 import type { GitError } from "./git.error";
 import type { ApiError } from "./http.error";
+import type { PullRequestError } from "./pull-request.error";
 import type { RepoError } from "./repo.error";
 import type { UserError } from "./user.error";
 
@@ -17,6 +18,7 @@ export * from "./email.error";
 export * from "./file.error";
 export * from "./git.error";
 export * from "./http.error";
+export * from "./pull-request.error";
 export * from "./repo.error";
 export * from "./user.error";
 
@@ -30,4 +32,5 @@ export type AppError =
   | FileError
   | GitError
   | ApiError
+  | PullRequestError
   | RepoError;
