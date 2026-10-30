@@ -37,6 +37,13 @@ export class EmailVerification {
   verified: boolean;
 
   @ApiProperty({
+    description: "인증 번호 입력 시도 횟수",
+    example: 0,
+  })
+  @Column({ type: "int", default: 0 })
+  attempts: number;
+
+  @ApiProperty({
     description: "인증 생성일",
     example: "2024-01-01T00:00:00.000Z",
   })

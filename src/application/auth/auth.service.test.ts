@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { EmailVerificationService } from "@src/application/email/email-verification.service";
 import type { UserAccount } from "@src/domain/user/user";
 import { hashPassword } from "@src/infrastructure/auth/password";
+import { hashRefreshToken } from "@src/infrastructure/auth/refresh-token";
 import type { UserRepository } from "@src/infrastructure/repositories/user.repository";
 import { AuthService } from "./auth.service";
 
@@ -15,7 +16,7 @@ const tagOf = (exit: Exit.Exit<unknown, { _tag: string }>) =>
 describe("AuthService", () => {
   const jwt = new JwtService({ secret: "test-secret" });
   let account: UserAccount;
-  let storedRefreshToken: string | null;
+  let storedRefreshTokenHash: string | null;
   let users: Record<string, ReturnType<typeof vi.fn>>;
   let verification: Record<string, ReturnType<typeof vi.fn>>;
   let service: AuthService;
@@ -27,21 +28,23 @@ describe("AuthService", () => {
       createdAt: new Date(),
       passwordHash: await Effect.runPromise(hashPassword("password123")),
     };
-    storedRefreshToken = null;
+    storedRefreshTokenHash = null;
     users = {
       findAccountByEmail: vi.fn((email: string) =>
         Effect.succeed(
           email === account.email ? Option.some(account) : Option.none(),
         ),
       ),
-      findByRefreshToken: vi.fn((token: string) =>
+      findByRefreshTokenHash: vi.fn((hash: string) =>
         Effect.succeed(
-          token === storedRefreshToken ? Option.some(account) : Option.none(),
+          hash === storedRefreshTokenHash
+            ? Option.some(account)
+            : Option.none(),
         ),
       ),
-      setRefreshToken: vi.fn((_id: string, token: string | null) =>
+      setRefreshTokenHash: vi.fn((_id: string, hash: string | null) =>
         Effect.sync(() => {
-          storedRefreshToken = token;
+          storedRefreshTokenHash = hash;
         }),
       ),
       create: vi.fn(() => Effect.succeed(account)),
@@ -108,7 +111,15 @@ describe("AuthService", () => {
         sub: "u1",
         type: "refresh",
       });
-      expect(storedRefreshToken).toBe(tokens.refreshToken);
+    });
+
+    it("refresh 토큰은 원문 대신 SHA-256 해시로 저장한다", async () => {
+      const { refreshToken } = await Effect.runPromise(
+        service.signIn({ email: account.email, password: "password123" }),
+      );
+      expect(storedRefreshTokenHash).not.toBe(refreshToken);
+      expect(storedRefreshTokenHash).toMatch(/^[0-9a-f]{64}$/);
+      expect(storedRefreshTokenHash).toBe(hashRefreshToken(refreshToken));
     });
   });
 
@@ -128,7 +139,7 @@ describe("AuthService", () => {
 
     it("access 토큰으로는 재발급할 수 없다", async () => {
       const { accessToken } = await signIn();
-      storedRefreshToken = accessToken;
+      storedRefreshTokenHash = hashRefreshToken(accessToken);
       const exit = await Effect.runPromiseExit(service.refresh(accessToken));
       expect(tagOf(exit)).toBe("InvalidRefreshTokenError");
     });
@@ -140,13 +151,32 @@ describe("AuthService", () => {
       expect(tagOf(exit)).toBe("InvalidRefreshTokenError");
     });
 
+    it("DB에 저장된 해시값 자체로는 재발급할 수 없다", async () => {
+      await signIn();
+      const exit = await Effect.runPromiseExit(
+        service.refresh(storedRefreshTokenHash ?? ""),
+      );
+      expect(tagOf(exit)).toBe("InvalidRefreshTokenError");
+    });
+
+    it("새로 로그인하면 이전 refresh 토큰은 폐기된다", async () => {
+      const first = await signIn();
+      // JWT iat가 초 단위라 같은 초에 발급하면 토큰이 같아진다
+      vi.useFakeTimers({ toFake: ["Date"], now: Date.now() + 2_000 });
+      await signIn().finally(() => vi.useRealTimers());
+      const exit = await Effect.runPromiseExit(
+        service.refresh(first.refreshToken),
+      );
+      expect(tagOf(exit)).toBe("InvalidRefreshTokenError");
+    });
+
     it("서명이 다른 토큰은 거부한다", async () => {
       const forged = new JwtService({ secret: "other" }).sign({
         sub: "u1",
         email: account.email,
         type: "refresh",
       });
-      storedRefreshToken = forged;
+      storedRefreshTokenHash = hashRefreshToken(forged);
       const exit = await Effect.runPromiseExit(service.refresh(forged));
       expect(tagOf(exit)).toBe("InvalidRefreshTokenError");
     });

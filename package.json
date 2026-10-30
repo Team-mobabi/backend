@@ -17,7 +17,12 @@
     "lint:fix": "biome check --write src",
     "tsc": "tsc --noEmit -p tsconfig.json --incremental false",
     "eval:ai": "bun src/application/ai/evaluation/evaluate.ts",
-    "check:di": "bun scripts/check-di.ts"
+    "check:di": "bun scripts/check-di.ts",
+    "typeorm": "bun ./node_modules/typeorm/cli.js -d src/data-source.ts",
+    "migration:generate": "bun ./node_modules/typeorm/cli.js migration:generate -d src/data-source.ts",
+    "migration:run": "bun ./node_modules/typeorm/cli.js migration:run -d src/data-source.ts",
+    "migration:revert": "bun ./node_modules/typeorm/cli.js migration:revert -d src/data-source.ts",
+    "migration:show": "bun ./node_modules/typeorm/cli.js migration:show -d src/data-source.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",
