@@ -26,7 +26,9 @@ import { PrReview } from "@src/repos/entities/pr-review.entity";
 import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Repo, PullRequest, PrReview, RepoCollaborator])],
+  imports: [
+    TypeOrmModule.forFeature([Repo, PullRequest, PrReview, RepoCollaborator]),
+  ],
   controllers: [
     ReposController,
     GitController,

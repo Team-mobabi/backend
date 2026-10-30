@@ -24,15 +24,27 @@ export class GitGraphBuilder {
     const branchInfo = await this.collectBranches(git);
     const allCommits = await this.fetchCommits(git, branchInfo, max, since);
 
-    const mainCommits = this.collectMainCommits(allCommits, branchInfo.localBranches);
-    const branchForkPoints = this.calculateForkPoints(allCommits, branchInfo.localBranches, mainCommits);
-    const commitToBranches = this.mapCommitsToBranches(allCommits, branchInfo.localBranches, mainCommits, branchForkPoints);
+    const mainCommits = this.collectMainCommits(
+      allCommits,
+      branchInfo.localBranches,
+    );
+    const branchForkPoints = this.calculateForkPoints(
+      allCommits,
+      branchInfo.localBranches,
+      mainCommits,
+    );
+    const commitToBranches = this.mapCommitsToBranches(
+      allCommits,
+      branchInfo.localBranches,
+      mainCommits,
+      branchForkPoints,
+    );
 
     const enrichedCommits = this.enrichCommitsWithBranches(
       allCommits,
       commitToBranches,
       branchInfo.localBranches,
-      branchInfo.remoteBranches
+      branchInfo.remoteBranches,
     );
 
     const local = {
@@ -61,7 +73,10 @@ export class GitGraphBuilder {
     const localBranches: Record<string, string> = {};
     const remoteBranches: Record<string, string> = {};
 
-    for (const [name, obj] of Object.entries(branchInfo.branches) as [string, BranchSummaryBranch][]) {
+    for (const [name, obj] of Object.entries(branchInfo.branches) as [
+      string,
+      BranchSummaryBranch,
+    ][]) {
       if (name.startsWith("remotes/origin/")) {
         const branchName = name.replace("remotes/origin/", "");
         remoteBranches[branchName] = obj.commit;
@@ -70,8 +85,16 @@ export class GitGraphBuilder {
       }
     }
 
-    this.logger.debug(`Local branches: ${Object.entries(localBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`).join(', ')}`);
-    this.logger.debug(`Remote branches: ${Object.entries(remoteBranches).map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`).join(', ')}`);
+    this.logger.debug(
+      `Local branches: ${Object.entries(localBranches)
+        .map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`)
+        .join(", ")}`,
+    );
+    this.logger.debug(
+      `Remote branches: ${Object.entries(remoteBranches)
+        .map(([name, hash]) => `${name}: ${hash.substring(0, 7)}`)
+        .join(", ")}`,
+    );
 
     return { localBranches, remoteBranches, currentBranch };
   }
@@ -80,13 +103,15 @@ export class GitGraphBuilder {
     git: SimpleGit,
     branchInfo: BranchInfo,
     max: number,
-    since?: string
+    since?: string,
   ): Promise<Commit[]> {
     const pretty = "%H|%P|%an|%ai|%s";
 
     const branchRefs = [
       ...Object.keys(branchInfo.localBranches),
-      ...Object.keys(branchInfo.remoteBranches).map(b => `remotes/origin/${b}`)
+      ...Object.keys(branchInfo.remoteBranches).map(
+        (b) => `remotes/origin/${b}`,
+      ),
     ];
 
     const args: string[] = [
@@ -117,7 +142,10 @@ export class GitGraphBuilder {
       });
   }
 
-  private collectMainCommits(allCommits: Commit[], localBranches: Record<string, string>): Set<string> {
+  private collectMainCommits(
+    allCommits: Commit[],
+    localBranches: Record<string, string>,
+  ): Set<string> {
     const mainCommits = new Set<string>();
 
     if (!localBranches.main) {
@@ -127,18 +155,27 @@ export class GitGraphBuilder {
     let currentHash: string | null = localBranches.main;
     const visited = new Set<string>();
 
-    this.logger.debug(`Collecting main commits (first-parent only), starting from: ${localBranches.main.substring(0, 7)}`);
+    this.logger.debug(
+      `Collecting main commits (first-parent only), starting from: ${localBranches.main.substring(0, 7)}`,
+    );
 
     while (currentHash && !visited.has(currentHash)) {
       visited.add(currentHash);
 
-      const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+      const commit = allCommits.find(
+        (c) =>
+          c.hash === currentHash || c.hash.startsWith(currentHash as string),
+      );
       if (!commit) {
-        this.logger.debug(`Commit not found in allCommits: ${currentHash.substring(0, 7)}`);
+        this.logger.debug(
+          `Commit not found in allCommits: ${currentHash.substring(0, 7)}`,
+        );
         break;
       }
 
-      this.logger.debug(`Adding to mainCommits: ${commit.shortHash} ${commit.message}`);
+      this.logger.debug(
+        `Adding to mainCommits: ${commit.shortHash} ${commit.message}`,
+      );
       mainCommits.add(commit.hash);
 
       currentHash = commit.parents[0] || null;
@@ -151,7 +188,7 @@ export class GitGraphBuilder {
   private calculateForkPoints(
     allCommits: Commit[],
     localBranches: Record<string, string>,
-    mainCommits: Set<string>
+    mainCommits: Set<string>,
   ): Record<string, string | null> {
     const branchForkPoints: Record<string, string | null> = {};
 
@@ -160,9 +197,11 @@ export class GitGraphBuilder {
     }
 
     for (const [branchName, headHash] of Object.entries(localBranches)) {
-      if (branchName === 'main') continue;
+      if (branchName === "main") continue;
 
-      this.logger.debug(`Finding forkPoint for ${branchName}, HEAD: ${headHash.substring(0, 7)}`);
+      this.logger.debug(
+        `Finding forkPoint for ${branchName}, HEAD: ${headHash.substring(0, 7)}`,
+      );
 
       let branchHash: string | null = headHash;
       const branchVisited = new Set<string>();
@@ -170,17 +209,26 @@ export class GitGraphBuilder {
 
       while (branchHash && !branchVisited.has(branchHash)) {
         branchVisited.add(branchHash);
-        const commit = allCommits.find(c => c.hash === branchHash || c.hash.startsWith(branchHash as string));
+        const commit = allCommits.find(
+          (c) =>
+            c.hash === branchHash || c.hash.startsWith(branchHash as string),
+        );
         if (!commit) {
-          this.logger.debug(`${branchName}: Commit not found: ${branchHash.substring(0, 7)}`);
+          this.logger.debug(
+            `${branchName}: Commit not found: ${branchHash.substring(0, 7)}`,
+          );
           break;
         }
 
-        this.logger.debug(`${branchName}: Checking commit ${commit.shortHash} (${commit.message}), in main: ${mainCommits.has(commit.hash)}`);
+        this.logger.debug(
+          `${branchName}: Checking commit ${commit.shortHash} (${commit.message}), in main: ${mainCommits.has(commit.hash)}`,
+        );
 
         if (mainCommits.has(commit.hash)) {
           forkPoint = commit.hash;
-          this.logger.debug(`${branchName}: Found forkPoint: ${commit.shortHash} ${commit.message}`);
+          this.logger.debug(
+            `${branchName}: Found forkPoint: ${commit.shortHash} ${commit.message}`,
+          );
           break;
         }
 
@@ -188,7 +236,9 @@ export class GitGraphBuilder {
       }
 
       branchForkPoints[branchName] = forkPoint;
-      this.logger.debug(`${branchName}: Final forkPoint: ${forkPoint?.substring(0, 7) || 'null'}`);
+      this.logger.debug(
+        `${branchName}: Final forkPoint: ${forkPoint?.substring(0, 7) || "null"}`,
+      );
     }
 
     return branchForkPoints;
@@ -198,7 +248,7 @@ export class GitGraphBuilder {
     allCommits: Commit[],
     localBranches: Record<string, string>,
     mainCommits: Set<string>,
-    branchForkPoints: Record<string, string | null>
+    branchForkPoints: Record<string, string | null>,
   ): Map<string, string[]> {
     const commitToBranches: Map<string, string[]> = new Map();
 
@@ -208,21 +258,24 @@ export class GitGraphBuilder {
 
       while (currentHash && !visited.has(currentHash)) {
         visited.add(currentHash);
-        const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+        const commit = allCommits.find(
+          (c) =>
+            c.hash === currentHash || c.hash.startsWith(currentHash as string),
+        );
         if (!commit) break;
 
         const fullHash = commit.hash;
         if (!commitToBranches.has(fullHash)) {
           commitToBranches.set(fullHash, []);
         }
-        commitToBranches.get(fullHash)?.push('main');
+        commitToBranches.get(fullHash)?.push("main");
 
         currentHash = commit.parents[0] || null;
       }
     }
 
     for (const [branchName, headHash] of Object.entries(localBranches)) {
-      if (branchName === 'main') continue;
+      if (branchName === "main") continue;
 
       const forkPoint = branchForkPoints[branchName];
       const visited = new Set<string>();
@@ -230,7 +283,10 @@ export class GitGraphBuilder {
 
       while (currentHash && !visited.has(currentHash)) {
         visited.add(currentHash);
-        const commit = allCommits.find(c => c.hash === currentHash || c.hash.startsWith(currentHash as string));
+        const commit = allCommits.find(
+          (c) =>
+            c.hash === currentHash || c.hash.startsWith(currentHash as string),
+        );
         if (!commit) break;
 
         const fullHash = commit.hash;
@@ -259,29 +315,35 @@ export class GitGraphBuilder {
     allCommits: Commit[],
     commitToBranches: Map<string, string[]>,
     localBranches: Record<string, string>,
-    remoteBranches: Record<string, string>
+    remoteBranches: Record<string, string>,
   ) {
-    return allCommits.map(commit => {
+    return allCommits.map((commit) => {
       const branches = commitToBranches.get(commit.hash) || [];
 
       const localHeadsPointingHere = Object.entries(localBranches).filter(
-        ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
+        ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash),
       );
 
       let localHeadBranch: string | null = null;
       if (localHeadsPointingHere.length > 0) {
-        const mainHead = localHeadsPointingHere.find(([name, _]) => name === 'main');
+        const mainHead = localHeadsPointingHere.find(
+          ([name, _]) => name === "main",
+        );
         localHeadBranch = mainHead ? mainHead[0] : localHeadsPointingHere[0][0];
       }
 
       const remoteHeadsPointingHere = Object.entries(remoteBranches).filter(
-        ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash)
+        ([_, hash]) => commit.hash === hash || commit.hash.startsWith(hash),
       );
 
       let remoteHeadBranch: string | null = null;
       if (remoteHeadsPointingHere.length > 0) {
-        const mainHead = remoteHeadsPointingHere.find(([name, _]) => name === 'main');
-        remoteHeadBranch = mainHead ? mainHead[0] : remoteHeadsPointingHere[0][0];
+        const mainHead = remoteHeadsPointingHere.find(
+          ([name, _]) => name === "main",
+        );
+        remoteHeadBranch = mainHead
+          ? mainHead[0]
+          : remoteHeadsPointingHere[0][0];
       }
 
       return {
@@ -294,7 +356,10 @@ export class GitGraphBuilder {
     });
   }
 
-  private buildBranchCommits(allCommits: Commit[], branchHeads: Record<string, string>) {
+  private buildBranchCommits(
+    allCommits: Commit[],
+    branchHeads: Record<string, string>,
+  ) {
     const result: Record<string, any[]> = {};
 
     for (const [branchName, headHash] of Object.entries(branchHeads)) {
@@ -304,7 +369,9 @@ export class GitGraphBuilder {
 
       while (currentHash && !visited.has(currentHash)) {
         visited.add(currentHash);
-        const commit = allCommits.find(c => c.hash.startsWith(currentHash as string));
+        const commit = allCommits.find((c) =>
+          c.hash.startsWith(currentHash as string),
+        );
         if (!commit) break;
 
         commits.push({
@@ -313,7 +380,7 @@ export class GitGraphBuilder {
           author: commit.author,
           committedAt: commit.committedAt,
           parents: commit.parents,
-          files: []
+          files: [],
         });
 
         currentHash = commit.parents[0] || null;

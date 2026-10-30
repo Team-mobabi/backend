@@ -16,13 +16,17 @@ export class PullHandler {
     git: SimpleGit,
     remote: string,
     branch: string | undefined,
-    ffOnly: boolean
+    ffOnly: boolean,
   ): Promise<PullResponse> {
     await this.validateUncommittedChanges(git);
     const targetBranch = await this.getTargetBranch(git, branch);
     await this.validateRemote(git, remote, targetBranch);
 
-    const { localHash, remoteHash } = await this.fetchAndGetHashes(git, remote, targetBranch);
+    const { localHash, remoteHash } = await this.fetchAndGetHashes(
+      git,
+      remote,
+      targetBranch,
+    );
 
     if (localHash === remoteHash) {
       throw new HttpException("", HttpStatus.NO_CONTENT);
@@ -56,7 +60,10 @@ export class PullHandler {
     }
   }
 
-  private async getTargetBranch(git: SimpleGit, branch?: string): Promise<string> {
+  private async getTargetBranch(
+    git: SimpleGit,
+    branch?: string,
+  ): Promise<string> {
     if (branch) {
       return branch;
     }
@@ -71,7 +78,11 @@ export class PullHandler {
     }
   }
 
-  private async validateRemote(git: SimpleGit, remote: string, targetBranch: string): Promise<void> {
+  private async validateRemote(
+    git: SimpleGit,
+    remote: string,
+    targetBranch: string,
+  ): Promise<void> {
     const remotes = await git.getRemotes();
     if (!remotes.find((r) => r.name === remote)) {
       throw new GitOperationException(
@@ -103,24 +114,35 @@ export class PullHandler {
   private async fetchAndGetHashes(
     git: SimpleGit,
     remote: string,
-    targetBranch: string
+    targetBranch: string,
   ): Promise<{ localHash: string; remoteHash: string }> {
     await git.fetch(remote, targetBranch);
 
     const localHash = (await git.revparse(["HEAD"])).trim();
-    const remoteHash = (await git.revparse([`${remote}/${targetBranch}`])).trim();
+    const remoteHash = (
+      await git.revparse([`${remote}/${targetBranch}`])
+    ).trim();
 
     return { localHash, remoteHash };
   }
 
-  private async checkIsAncestor(git: SimpleGit, localHash: string, remoteHash: string): Promise<boolean> {
+  private async checkIsAncestor(
+    git: SimpleGit,
+    localHash: string,
+    remoteHash: string,
+  ): Promise<boolean> {
     return await git
       .raw(["merge-base", "--is-ancestor", localHash, remoteHash])
       .then(() => true)
       .catch(() => false);
   }
 
-  private async performPull(git: SimpleGit, remote: string, targetBranch: string, ffOnly: boolean): Promise<void> {
+  private async performPull(
+    git: SimpleGit,
+    remote: string,
+    targetBranch: string,
+    ffOnly: boolean,
+  ): Promise<void> {
     try {
       await git.pull(remote, targetBranch, ffOnly ? { "--ff-only": null } : {});
     } catch (err) {
@@ -138,7 +160,11 @@ export class PullHandler {
     }
   }
 
-  private async buildResponse(git: SimpleGit, localHash: string, isAncestor: boolean): Promise<PullResponse> {
+  private async buildResponse(
+    git: SimpleGit,
+    localHash: string,
+    isAncestor: boolean,
+  ): Promise<PullResponse> {
     const postStatus = await git.status();
     const conflictFiles = postStatus.conflicted || [];
     const hasConflict = conflictFiles.length > 0;

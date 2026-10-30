@@ -116,28 +116,52 @@ export class GitController {
 - 최근 커밋을 취소하고 다시 작업하고 싶을 때
 - 잘못된 커밋을 완전히 제거하고 싶을 때 (hard)
 - 커밋은 취소하되 변경사항은 유지하고 싶을 때 (soft/mixed)
-`
+`,
   })
   @ApiResponse({
     status: 200,
     description: "Reset이 성공적으로 완료됨",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        mode: { type: 'string', enum: ['hard', 'soft', 'mixed'], example: 'hard' },
-        from: { type: 'string', example: 'def5678', description: 'Reset 전 커밋 해시' },
-        to: { type: 'string', example: 'abc1234', description: 'Reset 후 커밋 해시' },
-        branch: { type: 'string', example: 'main', description: '현재 브랜치' },
-        modified: { type: 'array', items: { type: 'string' }, description: 'Modified 파일 목록' },
-        staged: { type: 'array', items: { type: 'string' }, description: 'Staged 파일 목록' },
-        message: { type: 'string', example: 'Hard reset: def5678 → abc1234 (작업 디렉토리까지 완전히 되돌림)' }
-      }
-    }
+        success: { type: "boolean", example: true },
+        mode: {
+          type: "string",
+          enum: ["hard", "soft", "mixed"],
+          example: "hard",
+        },
+        from: {
+          type: "string",
+          example: "def5678",
+          description: "Reset 전 커밋 해시",
+        },
+        to: {
+          type: "string",
+          example: "abc1234",
+          description: "Reset 후 커밋 해시",
+        },
+        branch: { type: "string", example: "main", description: "현재 브랜치" },
+        modified: {
+          type: "array",
+          items: { type: "string" },
+          description: "Modified 파일 목록",
+        },
+        staged: {
+          type: "array",
+          items: { type: "string" },
+          description: "Staged 파일 목록",
+        },
+        message: {
+          type: "string",
+          example:
+            "Hard reset: def5678 → abc1234 (작업 디렉토리까지 완전히 되돌림)",
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 404,
-    description: "커밋을 찾을 수 없음"
+    description: "커밋을 찾을 수 없음",
   })
   @Post(":repoId/reset")
   @HttpCode(HttpStatus.OK)
@@ -241,11 +265,12 @@ curl -X POST "http://localhost:6101/repos/:repoId/pull" \\
   -H "Content-Type: application/json" \\
   -d '{"remote": "origin", "branch": "main"}'
 \`\`\`
-`
+`,
   })
   @ApiResponse({
     status: 200,
-    description: "Pull이 완료됨. 응답에 충돌 정보 포함됨 (hasConflict, conflictFiles)",
+    description:
+      "Pull이 완료됨. 응답에 충돌 정보 포함됨 (hasConflict, conflictFiles)",
     type: PullResponse,
   })
   @Post(":repoId/pull")
@@ -290,7 +315,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 \`\`\`
 
 **참고:** upstream이 설정되지 않은 경우 자동으로 \`--set-upstream\` 옵션이 적용됩니다.
-`
+`,
   })
   @ApiResponse({ status: 200, description: "Push가 성공적으로 완료됨" })
   @Post(":repoId/push")
@@ -332,7 +357,7 @@ curl -X POST "http://localhost:6101/repos/:repoId/push" \\
 - \`isEmpty\`: 초기 업로드 화면 표시 여부 결정
 - \`allFiles\`: 저장소 전체 파일 목록 (커밋된 파일 포함)
 - \`files\`: 변경된 파일만 표시 (git add 대상)
-`
+`,
   })
   @ApiResponse({ status: 200, description: "저장소 상태 반환" })
   @Get(":repoId/status")

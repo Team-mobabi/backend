@@ -36,30 +36,30 @@ export class ConflictController {
 
   @ApiOperation({
     summary: "충돌 파일 목록 조회",
-    description: "현재 레포지토리의 충돌 상태와 충돌 파일 목록을 반환합니다."
+    description: "현재 레포지토리의 충돌 상태와 충돌 파일 목록을 반환합니다.",
   })
   @ApiResponse({
     status: 200,
     description: "충돌 정보 반환",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        hasConflict: { type: 'boolean', example: true },
+        hasConflict: { type: "boolean", example: true },
         conflictFiles: {
-          type: 'array',
-          items: { type: 'string' },
-          example: ['README.md', 'src/index.ts']
+          type: "array",
+          items: { type: "string" },
+          example: ["README.md", "src/index.ts"],
         },
-        message: { type: 'string', example: '2개 파일에서 충돌이 발생했습니다' }
-      }
-    }
+        message: {
+          type: "string",
+          example: "2개 파일에서 충돌이 발생했습니다",
+        },
+      },
+    },
   })
   @Get(":repoId/conflicts")
   @HttpCode(HttpStatus.OK)
-  async getConflicts(
-    @Param("repoId") repoId: string,
-    @AuthUser() user: User,
-  ) {
+  async getConflicts(@Param("repoId") repoId: string, @AuthUser() user: User) {
     return this.gitConflictService.checkForConflicts(repoId, user.id);
   }
 
@@ -87,36 +87,40 @@ export class ConflictController {
   "resolution": "manual",
   "manualContent": "# 수정된 내용\\n..."
 }
-\`\`\``
+\`\`\``,
   })
   @ApiResponse({
     status: 200,
     description: "충돌이 성공적으로 해결됨",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: '파일 충돌이 해결되었습니다' }
-      }
-    }
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "파일 충돌이 해결되었습니다" },
+      },
+    },
   })
   @ApiBody({
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        filePath: { type: 'string', example: 'README.md', description: '충돌 파일 경로' },
+        filePath: {
+          type: "string",
+          example: "README.md",
+          description: "충돌 파일 경로",
+        },
         resolution: {
-          type: 'string',
-          enum: ['ours', 'theirs', 'manual'],
-          description: '해결 방법'
+          type: "string",
+          enum: ["ours", "theirs", "manual"],
+          description: "해결 방법",
         },
         manualContent: {
-          type: 'string',
-          description: 'resolution이 manual일 때 필요한 파일 내용'
-        }
+          type: "string",
+          description: "resolution이 manual일 때 필요한 파일 내용",
+        },
       },
-      required: ['filePath', 'resolution']
-    }
+      required: ["filePath", "resolution"],
+    },
   })
   @Post(":repoId/conflicts/resolve")
   @HttpCode(HttpStatus.OK)
@@ -140,25 +144,22 @@ export class ConflictController {
 
   @ApiOperation({
     summary: "병합 중단",
-    description: "진행 중인 병합을 취소하고 이전 상태로 되돌립니다."
+    description: "진행 중인 병합을 취소하고 이전 상태로 되돌립니다.",
   })
   @ApiResponse({
     status: 200,
     description: "병합이 성공적으로 취소됨",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
-        message: { type: 'string', example: '병합이 취소되었습니다' }
-      }
-    }
+        success: { type: "boolean", example: true },
+        message: { type: "string", example: "병합이 취소되었습니다" },
+      },
+    },
   })
   @Post(":repoId/merge/abort")
   @HttpCode(HttpStatus.OK)
-  async abortMerge(
-    @Param("repoId") repoId: string,
-    @AuthUser() user: User,
-  ) {
+  async abortMerge(@Param("repoId") repoId: string, @AuthUser() user: User) {
     return this.gitConflictService.abortMerge(repoId, user.id);
   }
 
@@ -189,92 +190,94 @@ export class ConflictController {
 }
 \`\`\`
 
-**참고:** CLAUDE_API_KEY 환경변수가 설정되어 있어야 합니다.`
+**참고:** CLAUDE_API_KEY 환경변수가 설정되어 있어야 합니다.`,
   })
   @ApiResponse({
     status: 200,
     description: "AI 제안이 성공적으로 생성됨",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
+        success: { type: "boolean", example: true },
         suggestion: {
-          type: 'string',
-          description: '충돌이 해결된 코드 (마커 제거됨)',
-          example: 'function hello() {\n  console.log("Hello");\n  return "greeting";\n}'
+          type: "string",
+          description: "충돌이 해결된 코드 (마커 제거됨)",
+          example:
+            'function hello() {\n  console.log("Hello");\n  return "greeting";\n}',
         },
         explanation: {
-          type: 'string',
-          description: 'AI가 선택한 이유 설명',
-          example: '두 브랜치의 console.log와 return문을 모두 유지했습니다...'
+          type: "string",
+          description: "AI가 선택한 이유 설명",
+          example: "두 브랜치의 console.log와 return문을 모두 유지했습니다...",
         },
         confidence: {
-          type: 'number',
-          description: '신뢰도 (0-1)',
-          example: 0.92
-        }
-      }
-    }
+          type: "number",
+          description: "신뢰도 (0-1)",
+          example: 0.92,
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 400,
-    description: "충돌 마커가 없거나 파일을 찾을 수 없음"
+    description: "충돌 마커가 없거나 파일을 찾을 수 없음",
   })
   @ApiResponse({
     status: 500,
-    description: "AI 서비스 오류"
+    description: "AI 서비스 오류",
   })
   @ApiBody({
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
         filePath: {
-          type: 'string',
-          example: 'README.md',
-          description: '충돌이 발생한 파일 경로'
-        }
+          type: "string",
+          example: "README.md",
+          description: "충돌이 발생한 파일 경로",
+        },
       },
-      required: ['filePath']
-    }
+      required: ["filePath"],
+    },
   })
   @Post(":repoId/conflicts/ai-suggest")
   @HttpCode(HttpStatus.OK)
   async aiSuggestConflictResolution(
     @Param("repoId") repoId: string,
     @AuthUser() user: User,
-    @Body() body: { filePath: string }
+    @Body() body: { filePath: string },
   ) {
     // 1. 충돌 파일 내용 읽기
     const fileContent = await this.fileService.browseFiles(
       repoId,
       user.id,
-      body.filePath
+      body.filePath,
     );
 
     // browseFiles의 반환 타입에 따라 처리
-    const conflictContent = typeof fileContent === 'string'
-      ? fileContent
-      : (fileContent as any).content || JSON.stringify(fileContent);
+    const conflictContent =
+      typeof fileContent === "string"
+        ? fileContent
+        : (fileContent as any).content || JSON.stringify(fileContent);
 
     // 2. 충돌 마커 확인
-    if (!conflictContent.includes('<<<<<<< HEAD')) {
+    if (!conflictContent.includes("<<<<<<< HEAD")) {
       throw new HttpException(
-        '이 파일에는 충돌 마커가 없습니다',
-        HttpStatus.BAD_REQUEST
+        "이 파일에는 충돌 마커가 없습니다",
+        HttpStatus.BAD_REQUEST,
       );
     }
 
     // 3. AI에게 해결 제안 요청
     const result = await this.aiConflictResolver.suggestResolution(
       conflictContent,
-      body.filePath
+      body.filePath,
     );
 
     return {
       success: true,
       suggestion: result.resolvedCode,
       explanation: result.explanation,
-      confidence: result.confidence
+      confidence: result.confidence,
     };
   }
 }

@@ -49,9 +49,9 @@ export class GitOperationService extends BaseRepoService {
 
       // 호환성을 위해 이전 형식 유지하면서 추가 정보 제공
       return {
-        files: changes,           // 이전 방식 (변경사항만) - 호환성 유지
-        allFiles,                 // 전체 파일 목록 (새로 추가)
-        isEmpty: allFiles.length === 0  // 저장소 비어있는지 (새로 추가)
+        files: changes, // 이전 방식 (변경사항만) - 호환성 유지
+        allFiles, // 전체 파일 목록 (새로 추가)
+        isEmpty: allFiles.length === 0, // 저장소 비어있는지 (새로 추가)
       };
     } catch (err) {
       throw new GitOperationException("status", err.message);
@@ -128,8 +128,8 @@ export class GitOperationService extends BaseRepoService {
 
     let commitResult;
     try {
-      const authorName = user?.email?.split('@')[0] || 'Unknown';
-      const authorEmail = user?.email || 'unknown@example.com';
+      const authorName = user?.email?.split("@")[0] || "Unknown";
+      const authorEmail = user?.email || "unknown@example.com";
 
       commitResult = await git.commit(message, undefined, {
         "--no-gpg-sign": null,
@@ -149,7 +149,9 @@ export class GitOperationService extends BaseRepoService {
       const [{ hash, message: msg, date }] = (await git.log({ maxCount: 1 }))
         .all;
 
-      this.logger.debug(`Commit 성공: hash=${hash}, message=${msg}, repoId=${repoId} ⚠️ Push는 별도로 수행해야 합니다`);
+      this.logger.debug(
+        `Commit 성공: hash=${hash}, message=${msg}, repoId=${repoId} ⚠️ Push는 별도로 수행해야 합니다`,
+      );
 
       return {
         success: true,
@@ -191,7 +193,9 @@ export class GitOperationService extends BaseRepoService {
       }
 
       const beforeHash = (await git.revparse(["HEAD"])).trim();
-      const beforeBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+      const beforeBranch = (
+        await git.revparse(["--abbrev-ref", "HEAD"])
+      ).trim();
 
       const resetOption = `--${mode}`;
       await git.reset([resetOption, commitHash]);

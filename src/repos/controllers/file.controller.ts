@@ -124,67 +124,93 @@ fetch('/repos/:repoId/files', {
 - 각 파일 최대 10MB
 - .gitignore 패턴에 매칭되는 파일은 자동 제외
 - 모든 파일 형식 지원 (이미지, PDF, ZIP 등)
-`
+`,
   })
   @ApiResponse({
     status: 201,
     description: "파일이 성공적으로 생성/업로드됨",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean', example: true },
+        success: { type: "boolean", example: true },
         uploadedFiles: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              filename: { type: 'string', example: 'image.png' },
-              path: { type: 'string', example: 'uploads/image.png' },
-              size: { type: 'number', example: 1024000 },
-              mimetype: { type: 'string', example: 'image/png' }
-            }
-          }
-        }
-      }
-    }
+              filename: { type: "string", example: "image.png" },
+              path: { type: "string", example: "uploads/image.png" },
+              size: { type: "number", example: 1024000 },
+              mimetype: { type: "string", example: "image/png" },
+            },
+          },
+        },
+      },
+    },
   })
-  @ApiConsumes('application/json', 'multipart/form-data')
+  @ApiConsumes("application/json", "multipart/form-data")
   @ApiBody({
     schema: {
       oneOf: [
         {
-          type: 'object',
-          title: 'JSON - 텍스트 파일 생성',
+          type: "object",
+          title: "JSON - 텍스트 파일 생성",
           properties: {
-            filename: { type: 'string', example: 'test.txt', description: '생성할 파일명' },
-            content: { type: 'string', example: 'Hello World', description: '파일 내용' },
-            path: { type: 'string', example: 'src', description: '파일 경로 (선택사항)' },
-            overwrite: { type: 'boolean', example: false, description: '덮어쓰기 허용 여부' },
+            filename: {
+              type: "string",
+              example: "test.txt",
+              description: "생성할 파일명",
+            },
+            content: {
+              type: "string",
+              example: "Hello World",
+              description: "파일 내용",
+            },
+            path: {
+              type: "string",
+              example: "src",
+              description: "파일 경로 (선택사항)",
+            },
+            overwrite: {
+              type: "boolean",
+              example: false,
+              description: "덮어쓰기 허용 여부",
+            },
           },
-          required: ['filename', 'content'],
+          required: ["filename", "content"],
         },
         {
-          type: 'object',
-          title: 'Multipart - 파일 업로드',
+          type: "object",
+          title: "Multipart - 파일 업로드",
           properties: {
             files: {
-              type: 'array',
-              items: { type: 'string', format: 'binary' },
-              description: '업로드할 파일들 (최대 100개, 각 10MB 제한)',
+              type: "array",
+              items: { type: "string", format: "binary" },
+              description: "업로드할 파일들 (최대 100개, 각 10MB 제한)",
             },
-            path: { type: 'string', example: 'uploads', description: '업로드 경로 (선택사항)' },
-            overwrite: { type: 'boolean', example: false, description: '덮어쓰기 허용 여부' },
+            path: {
+              type: "string",
+              example: "uploads",
+              description: "업로드 경로 (선택사항)",
+            },
+            overwrite: {
+              type: "boolean",
+              example: false,
+              description: "덮어쓰기 허용 여부",
+            },
           },
-          required: ['files'],
+          required: ["files"],
         },
       ],
     },
   })
   @Post(":repoId/files")
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FilesInterceptor('files', 100, {
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB 제한
-  }))
+  @UseInterceptors(
+    FilesInterceptor("files", 100, {
+      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB 제한
+    }),
+  )
   async createOrUploadFile(
     @Param("repoId") repoId: string,
     @AuthUser() user: User,
@@ -193,9 +219,10 @@ fetch('/repos/:repoId/files', {
   ) {
     if (files && files.length > 0) {
       const uploadPath = body?.path || "";
-      const overwrite = body?.overwrite !== undefined
-        ? (Boolean(body?.overwrite) || String(body?.overwrite) === 'true')
-        : true; // 기본값을 true로 변경
+      const overwrite =
+        body?.overwrite !== undefined
+          ? Boolean(body?.overwrite) || String(body?.overwrite) === "true"
+          : true; // 기본값을 true로 변경
 
       // paths 필드 받기 (배열 또는 단일 값)
       let paths: string[] = [];
@@ -278,23 +305,23 @@ fetch('/repos/:repoId/files/download?path=uploads/image.png', {
   a.click();
 });
 \`\`\`
-`
+`,
   })
   @ApiQuery({
-    name: 'path',
+    name: "path",
     required: true,
-    description: '다운로드할 파일의 경로',
-    example: 'README.md',
-    type: String
+    description: "다운로드할 파일의 경로",
+    example: "README.md",
+    type: String,
   })
   @ApiResponse({
     status: 200,
     description: "파일 다운로드 성공",
     content: {
-      'application/octet-stream': {
-        schema: { type: 'string', format: 'binary' }
-      }
-    }
+      "application/octet-stream": {
+        schema: { type: "string", format: "binary" },
+      },
+    },
   })
   @ApiResponse({ status: 400, description: "잘못된 파일 경로" })
   @ApiResponse({ status: 403, description: "권한 없음" })
@@ -339,16 +366,16 @@ fetch('/repos/:repoId/download', {
 - .git 폴더 제외 (순수 소스 코드만)
 - 파일 구조 유지
 - 저장소 이름으로 zip 파일명 자동 생성
-`
+`,
   })
   @ApiResponse({
     status: 200,
     description: "저장소 zip 다운로드 성공",
     content: {
-      'application/zip': {
-        schema: { type: 'string', format: 'binary' }
-      }
-    }
+      "application/zip": {
+        schema: { type: "string", format: "binary" },
+      },
+    },
   })
   @ApiResponse({ status: 403, description: "권한 없음" })
   @ApiResponse({ status: 404, description: "저장소를 찾을 수 없음" })

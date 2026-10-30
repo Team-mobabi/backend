@@ -14,22 +14,36 @@ export class PushHandler {
     remote: string,
     branch: string | undefined,
     force: boolean | undefined,
-    repoId: string
+    repoId: string,
   ): Promise<PushResponse> {
     const targetBranch = await this.getTargetBranch(git, branch);
     await this.validateRemote(git, remote);
     await this.validateLocalBranch(git, targetBranch);
 
-    const { remoteExists, ahead } = await this.checkRemoteStatus(git, remote, targetBranch);
+    const { remoteExists, ahead } = await this.checkRemoteStatus(
+      git,
+      remote,
+      targetBranch,
+    );
 
     if (!force && remoteExists && ahead === 0) {
       return { success: true, upToDate: true, pushed: [] };
     }
 
-    return await this.performPush(git, remote, targetBranch, force, ahead, repoId);
+    return await this.performPush(
+      git,
+      remote,
+      targetBranch,
+      force,
+      ahead,
+      repoId,
+    );
   }
 
-  private async getTargetBranch(git: SimpleGit, branch?: string): Promise<string> {
+  private async getTargetBranch(
+    git: SimpleGit,
+    branch?: string,
+  ): Promise<string> {
     if (branch) {
       return branch;
     }
@@ -54,7 +68,10 @@ export class PushHandler {
     }
   }
 
-  private async validateLocalBranch(git: SimpleGit, targetBranch: string): Promise<void> {
+  private async validateLocalBranch(
+    git: SimpleGit,
+    targetBranch: string,
+  ): Promise<void> {
     try {
       await git.raw(["rev-parse", "--verify", targetBranch]);
     } catch {
@@ -68,7 +85,7 @@ export class PushHandler {
   private async checkRemoteStatus(
     git: SimpleGit,
     remote: string,
-    targetBranch: string
+    targetBranch: string,
   ): Promise<{ remoteExists: boolean; ahead: number }> {
     let remoteExists = true;
     try {
@@ -102,18 +119,18 @@ export class PushHandler {
     targetBranch: string,
     force: boolean | undefined,
     ahead: number,
-    repoId: string
+    repoId: string,
   ): Promise<PushResponse> {
     try {
       this.logger.debug(
-        `Push 시작: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, ahead=${ahead}, force=${force} ${force ? '⚠️ Force Push 수행' : '🚀 실제로 Push를 수행합니다'}`
+        `Push 시작: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, ahead=${ahead}, force=${force} ${force ? "⚠️ Force Push 수행" : "🚀 실제로 Push를 수행합니다"}`,
       );
 
-      const pushOptions = force ? ['--force'] : [];
+      const pushOptions = force ? ["--force"] : [];
       const res = await git.push(remote, targetBranch, pushOptions);
 
       this.logger.debug(
-        `Push 성공: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, pushed=${JSON.stringify(res.pushed)}`
+        `Push 성공: repoId=${repoId}, remote=${remote}, branch=${targetBranch}, pushed=${JSON.stringify(res.pushed)}`,
       );
 
       return {
@@ -130,7 +147,7 @@ export class PushHandler {
     git: SimpleGit,
     remote: string,
     targetBranch: string,
-    err: any
+    err: any,
   ): Promise<PushResponse> {
     const errorMessage = err.message || err.toString();
 
@@ -150,10 +167,7 @@ export class PushHandler {
     }
 
     if (/authentication|permission|unauthorized/i.test(errorMessage)) {
-      throw new GitOperationException(
-        "push",
-        `인증 실패: ${errorMessage}`,
-      );
+      throw new GitOperationException("push", `인증 실패: ${errorMessage}`);
     }
 
     throw new GitOperationException("push", errorMessage);
@@ -162,7 +176,7 @@ export class PushHandler {
   private async retryWithUpstream(
     git: SimpleGit,
     remote: string,
-    targetBranch: string
+    targetBranch: string,
   ): Promise<PushResponse> {
     try {
       const res = await git.push(remote, targetBranch, ["--set-upstream"]);

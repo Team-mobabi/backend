@@ -50,9 +50,13 @@ export class FileService extends BaseRepoService {
    * @throws FilenameTooLongException 파일명이 너무 긴 경우
    */
   private validateFilename(filename: string): void {
-    const filenameBytes = Buffer.byteLength(filename, 'utf8');
+    const filenameBytes = Buffer.byteLength(filename, "utf8");
     if (filenameBytes > this.MAX_FILENAME_BYTES) {
-      throw new FilenameTooLongException(filename, this.MAX_FILENAME_BYTES, filenameBytes);
+      throw new FilenameTooLongException(
+        filename,
+        this.MAX_FILENAME_BYTES,
+        filenameBytes,
+      );
     }
   }
 
@@ -229,7 +233,10 @@ export class FileService extends BaseRepoService {
     filePath: string,
   ): Promise<FileDeleteResult> {
     if (!filePath) {
-      throw new HttpException("파일 경로가 필요합니다.", HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        "파일 경로가 필요합니다.",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const { git, repoPath } = await this.getRepoAndGit(repoId, userId);
@@ -271,16 +278,18 @@ export class FileService extends BaseRepoService {
   /**
    * .gitignore 파일을 읽고 ignore 인스턴스 생성
    */
-  private async loadGitignore(repoPath: string): Promise<ReturnType<typeof ignore> | null> {
+  private async loadGitignore(
+    repoPath: string,
+  ): Promise<ReturnType<typeof ignore> | null> {
     try {
-      const gitignorePath = path.join(repoPath, '.gitignore');
-      const gitignoreContent = await fs.readFile(gitignorePath, 'utf8');
+      const gitignorePath = path.join(repoPath, ".gitignore");
+      const gitignoreContent = await fs.readFile(gitignorePath, "utf8");
       const ig = ignore();
       ig.add(gitignoreContent);
       return ig;
     } catch (err) {
       // .gitignore 파일이 없으면 null 반환
-      if (err.code === 'ENOENT') {
+      if (err.code === "ENOENT") {
         return null;
       }
       throw err;
@@ -295,11 +304,16 @@ export class FileService extends BaseRepoService {
     overwrite = false,
     paths?: string[],
   ): Promise<UploadResult> {
-    this.logger.debug(`uploadFiles 호출: filesCount=${files.length}, uploadPath=${uploadPath}, overwrite=${overwrite}, paths=${JSON.stringify(paths)}, fileOriginalNames=${JSON.stringify(files.map(f => f.originalname))}`);
+    this.logger.debug(
+      `uploadFiles 호출: filesCount=${files.length}, uploadPath=${uploadPath}, overwrite=${overwrite}, paths=${JSON.stringify(paths)}, fileOriginalNames=${JSON.stringify(files.map((f) => f.originalname))}`,
+    );
 
     for (let i = 0; i < files.length; i++) {
-      const filePathToValidate = paths && paths[i] ? paths[i] : files[i].originalname;
-      this.logger.debug(`파일 ${i}: originalname=${files[i].originalname}, path=${paths?.[i]}, using=${filePathToValidate}`);
+      const filePathToValidate =
+        paths && paths[i] ? paths[i] : files[i].originalname;
+      this.logger.debug(
+        `파일 ${i}: originalname=${files[i].originalname}, path=${paths?.[i]}, using=${filePathToValidate}`,
+      );
       this.validateFilename(filePathToValidate);
     }
 
@@ -307,13 +321,18 @@ export class FileService extends BaseRepoService {
 
     const ig = await this.loadGitignore(repoPath);
 
-    const filteredFiles: Array<{ file: Express.Multer.File; relativePath: string }> = [];
+    const filteredFiles: Array<{
+      file: Express.Multer.File;
+      relativePath: string;
+    }> = [];
     const ignoredFiles: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const relativePath = paths && paths[i] ? paths[i] : file.originalname;
-      const relativeFilePath = path.join(uploadPath, relativePath).replace(/\\/g, "/");
+      const relativeFilePath = path
+        .join(uploadPath, relativePath)
+        .replace(/\\/g, "/");
 
       if (ig && ig.ignores(relativeFilePath)) {
         ignoredFiles.push(relativePath);
@@ -365,7 +384,7 @@ export class FileService extends BaseRepoService {
       ...(ignoredFiles.length > 0 && {
         ignoredFiles,
         ignoredCount: ignoredFiles.length,
-        message: `${uploadedFiles.length}개 파일 업로드 완료, ${ignoredFiles.length}개 파일 제외(.gitignore)`
+        message: `${uploadedFiles.length}개 파일 업로드 완료, ${ignoredFiles.length}개 파일 제외(.gitignore)`,
       }),
     };
   }
@@ -377,7 +396,10 @@ export class FileService extends BaseRepoService {
     res: Response,
   ): Promise<void> {
     if (!filePath) {
-      throw new HttpException("파일 경로가 필요합니다.", HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        "파일 경로가 필요합니다.",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const { repoPath } = await this.getRepoAndGit(repoId, userId);
@@ -386,7 +408,10 @@ export class FileService extends BaseRepoService {
     const normalizedPath = path.normalize(fullPath);
 
     if (!normalizedPath.startsWith(repoPath)) {
-      throw new HttpException("잘못된 파일 경로입니다.", HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        "잘못된 파일 경로입니다.",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     try {
@@ -398,9 +423,12 @@ export class FileService extends BaseRepoService {
 
       const filename = path.basename(filePath);
 
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-      res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Length', stats.size);
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(filename)}"`,
+      );
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Length", stats.size);
 
       const fileBuffer = await fs.readFile(normalizedPath);
       res.send(fileBuffer);
@@ -421,24 +449,27 @@ export class FileService extends BaseRepoService {
 
     const zipFilename = `${repo.name || repoId}.zip`;
 
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(zipFilename)}"`);
-    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodeURIComponent(zipFilename)}"`,
+    );
+    res.setHeader("Content-Type", "application/zip");
 
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
+    const archive = archiver("zip", {
+      zlib: { level: 9 },
     });
 
-    archive.on('error', (err) => {
+    archive.on("error", (err) => {
       this.logger.error(`Archive error: ${err.message}`);
       throw err;
     });
 
     archive.pipe(res);
 
-    archive.glob('**/*', {
+    archive.glob("**/*", {
       cwd: repoPath,
-      ignore: ['.git/**', '.git'],
-      dot: true
+      ignore: [".git/**", ".git"],
+      dot: true,
     });
 
     await archive.finalize();

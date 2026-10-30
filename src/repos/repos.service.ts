@@ -1,4 +1,9 @@
-import { Injectable, InternalServerErrorException, NotFoundException, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repo } from "@src/repos/entities/repo.entity";
 import { PullRequest } from "@src/repos/entities/pull-request.entity";
@@ -6,7 +11,10 @@ import { PrReview } from "@src/repos/entities/pr-review.entity";
 import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
-import { RepoResponseDto, RepoOwnerDto } from "@src/repos/dto/repo-response.dto";
+import {
+  RepoResponseDto,
+  RepoOwnerDto,
+} from "@src/repos/dto/repo-response.dto";
 import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import simpleGit from "simple-git";
@@ -38,8 +46,15 @@ export class ReposService extends BaseRepoService {
     const savedRepo = await this.repoRepository.save(newRepo);
 
     try {
-      const remotePath = path.join(this.remoteBasePath, `${savedRepo.repoId}.git`);
-      const ownerRepoPath = path.join(this.repoBasePath, ownerId, savedRepo.repoId);
+      const remotePath = path.join(
+        this.remoteBasePath,
+        `${savedRepo.repoId}.git`,
+      );
+      const ownerRepoPath = path.join(
+        this.repoBasePath,
+        ownerId,
+        savedRepo.repoId,
+      );
 
       await this.ensureDirectoryExists(remotePath);
       const remoteGit = simpleGit(remotePath);
@@ -64,7 +79,9 @@ export class ReposService extends BaseRepoService {
       });
 
       if (!repoWithOwner) {
-        throw new InternalServerErrorException("Failed to retrieve created repository");
+        throw new InternalServerErrorException(
+          "Failed to retrieve created repository",
+        );
       }
 
       return this.toRepoResponseDto(repoWithOwner);
@@ -83,7 +100,7 @@ export class ReposService extends BaseRepoService {
       order: { createdAt: "DESC" },
     });
 
-    return repos.map(repo => this.toRepoResponseDto(repo));
+    return repos.map((repo) => this.toRepoResponseDto(repo));
   }
 
   async findReposByUserAccess(userId: string): Promise<RepoResponseDto[]> {
@@ -97,10 +114,10 @@ export class ReposService extends BaseRepoService {
       relations: ["repo", "repo.owner"],
     });
 
-    const collaboratorRepos = collaborations.map(c => c.repo);
+    const collaboratorRepos = collaborations.map((c) => c.repo);
 
     const allRepos = [...ownedRepos];
-    const ownedRepoIds = new Set(ownedRepos.map(r => r.repoId));
+    const ownedRepoIds = new Set(ownedRepos.map((r) => r.repoId));
 
     for (const repo of collaboratorRepos) {
       if (!ownedRepoIds.has(repo.repoId)) {
@@ -110,7 +127,7 @@ export class ReposService extends BaseRepoService {
 
     allRepos.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    return allRepos.map(repo => this.toRepoResponseDto(repo));
+    return allRepos.map((repo) => this.toRepoResponseDto(repo));
   }
 
   private toRepoResponseDto(repo: Repo): RepoResponseDto {
@@ -141,7 +158,7 @@ export class ReposService extends BaseRepoService {
       order: { createdAt: "DESC" },
     });
 
-    return repos.map(repo => this.toRepoResponseDto(repo));
+    return repos.map((repo) => this.toRepoResponseDto(repo));
   }
 
   async findPublicReposByOwner(ownerId: string): Promise<RepoResponseDto[]> {
@@ -151,7 +168,7 @@ export class ReposService extends BaseRepoService {
       order: { createdAt: "DESC" },
     });
 
-    return repos.map(repo => this.toRepoResponseDto(repo));
+    return repos.map((repo) => this.toRepoResponseDto(repo));
   }
 
   async forkRepo(
@@ -183,13 +200,23 @@ export class ReposService extends BaseRepoService {
     const savedRepo = await this.repoRepository.save(newRepo);
 
     try {
-      const sourceRemotePath = path.join(this.remoteBasePath, `${sourceRepoId}.git`);
-      const forkedRemotePath = path.join(this.remoteBasePath, `${savedRepo.repoId}.git`);
-      const forkedUserRepoPath = path.join(this.repoBasePath, userId, savedRepo.repoId);
+      const sourceRemotePath = path.join(
+        this.remoteBasePath,
+        `${sourceRepoId}.git`,
+      );
+      const forkedRemotePath = path.join(
+        this.remoteBasePath,
+        `${savedRepo.repoId}.git`,
+      );
+      const forkedUserRepoPath = path.join(
+        this.repoBasePath,
+        userId,
+        savedRepo.repoId,
+      );
 
       await this.ensureDirectoryExists(path.dirname(forkedRemotePath));
       const git = simpleGit();
-      await git.clone(sourceRemotePath, forkedRemotePath, ['--mirror']);
+      await git.clone(sourceRemotePath, forkedRemotePath, ["--mirror"]);
 
       await this.ensureDirectoryExists(path.dirname(forkedUserRepoPath));
       await git.clone(forkedRemotePath, forkedUserRepoPath);
@@ -197,18 +224,25 @@ export class ReposService extends BaseRepoService {
       const forkedGit = simpleGit(forkedUserRepoPath);
       await forkedGit.addConfig("commit.gpgsign", "false");
 
-      const branches = await forkedGit.branch(['-r']);
-      const currentBranch = (await forkedGit.revparse(['--abbrev-ref', 'HEAD'])).trim();
+      const branches = await forkedGit.branch(["-r"]);
+      const currentBranch = (
+        await forkedGit.revparse(["--abbrev-ref", "HEAD"])
+      ).trim();
 
       for (const remoteBranch of Object.keys(branches.branches)) {
-        if (remoteBranch.includes('origin/') && !remoteBranch.includes('HEAD')) {
-          const localBranchName = remoteBranch.replace('origin/', '');
+        if (
+          remoteBranch.includes("origin/") &&
+          !remoteBranch.includes("HEAD")
+        ) {
+          const localBranchName = remoteBranch.replace("origin/", "");
 
           if (localBranchName !== currentBranch) {
             try {
-              await forkedGit.checkout(['-b', localBranchName, remoteBranch]);
+              await forkedGit.checkout(["-b", localBranchName, remoteBranch]);
             } catch (err) {
-              console.warn(`Failed to create local branch ${localBranchName}: ${err.message}`);
+              console.warn(
+                `Failed to create local branch ${localBranchName}: ${err.message}`,
+              );
             }
           }
         }
@@ -222,7 +256,9 @@ export class ReposService extends BaseRepoService {
       });
 
       if (!repoWithOwner) {
-        throw new InternalServerErrorException("Failed to retrieve created repository");
+        throw new InternalServerErrorException(
+          "Failed to retrieve created repository",
+        );
       }
 
       return this.toRepoResponseDto(repoWithOwner);
@@ -261,7 +297,7 @@ export class ReposService extends BaseRepoService {
       const collaborators = await this.collaboratorRepository.find({
         where: { repoId },
       });
-      const allUserIds = [repo.ownerId, ...collaborators.map(c => c.userId)];
+      const allUserIds = [repo.ownerId, ...collaborators.map((c) => c.userId)];
 
       for (const uid of allUserIds) {
         const userRepoPath = path.join(this.repoBasePath, uid, repoId);
@@ -269,7 +305,9 @@ export class ReposService extends BaseRepoService {
           await fs.rm(userRepoPath, { recursive: true, force: true });
         } catch (error) {
           if (error.code !== "ENOENT") {
-            console.warn(`Failed to delete user repo path ${userRepoPath}: ${error.message}`);
+            console.warn(
+              `Failed to delete user repo path ${userRepoPath}: ${error.message}`,
+            );
           }
         }
       }

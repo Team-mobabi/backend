@@ -6,7 +6,10 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import simpleGit, { SimpleGit } from "simple-git";
 import { Repo } from "@src/repos/entities/repo.entity";
-import { RepoCollaborator, CollaboratorRole } from "@src/repos/entities/repo-collaborator.entity";
+import {
+  RepoCollaborator,
+  CollaboratorRole,
+} from "@src/repos/entities/repo-collaborator.entity";
 import {
   RepoNotFoundException,
   RepoAccessDeniedException,
@@ -29,8 +32,12 @@ export abstract class BaseRepoService {
     const pathKey = env === "prod" ? "REPO_BASE_PATH" : "REPO_LOCAL_BASE_PATH";
     this.repoBasePath = this.configService.get<string>(pathKey, "data/repos");
 
-    const remotePathKey = env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
-    this.remoteBasePath = this.configService.get<string>(remotePathKey, "data/remote");
+    const remotePathKey =
+      env === "prod" ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH";
+    this.remoteBasePath = this.configService.get<string>(
+      remotePathKey,
+      "data/remote",
+    );
   }
 
   protected async getRepoAndGit(

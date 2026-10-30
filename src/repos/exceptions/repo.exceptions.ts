@@ -70,12 +70,12 @@ export class FilenameTooLongException extends BadRequestException {
   constructor(filename: string, maxBytes: number, actualBytes: number) {
     super({
       statusCode: 400,
-      error: 'Filename Too Long',
-      message: '파일명이 너무 깁니다. 파일명을 짧게 변경해주세요.',
+      error: "Filename Too Long",
+      message: "파일명이 너무 깁니다. 파일명을 짧게 변경해주세요.",
       filename,
       maxBytes,
       actualBytes,
-      hint: '한글은 한 글자당 3바이트를 차지합니다. 영문과 숫자를 사용하거나 파일명을 50자 이내로 줄여주세요.',
+      hint: "한글은 한 글자당 3바이트를 차지합니다. 영문과 숫자를 사용하거나 파일명을 50자 이내로 줄여주세요.",
     });
   }
 }
@@ -192,16 +192,18 @@ export class ApprovalRequiredException extends ForbiddenException {
  * Git Pull 시 로컬 변경사항과 충돌할 때 발생
  */
 export class GitPullConflictException extends ConflictException {
-  constructor(public readonly conflictDetails: {
-    message: string;
-    localChanges?: string[];
-    conflictFiles?: string[];
-  }) {
+  constructor(
+    public readonly conflictDetails: {
+      message: string;
+      localChanges?: string[];
+      conflictFiles?: string[];
+    },
+  ) {
     super({
       statusCode: 409,
-      error: 'Pull Conflict',
+      error: "Pull Conflict",
       ...conflictDetails,
-      resolution: '로컬 변경사항을 커밋하거나 stash한 후 다시 시도해주세요'
+      resolution: "로컬 변경사항을 커밋하거나 stash한 후 다시 시도해주세요",
     });
   }
 }
@@ -210,21 +212,23 @@ export class GitPullConflictException extends ConflictException {
  * Git Push가 거부될 때 발생
  */
 export class GitPushRejectedException extends ConflictException {
-  constructor(public readonly details: {
-    reason: string;
-    hint?: string;
-  }) {
-    const resolution = details.reason.includes('non-fast-forward')
-      ? '원격 저장소의 변경사항을 먼저 pull한 후 push해주세요'
-      : '원격 저장소 상태를 확인해주세요';
+  constructor(
+    public readonly details: {
+      reason: string;
+      hint?: string;
+    },
+  ) {
+    const resolution = details.reason.includes("non-fast-forward")
+      ? "원격 저장소의 변경사항을 먼저 pull한 후 push해주세요"
+      : "원격 저장소 상태를 확인해주세요";
 
     super({
       statusCode: 409,
-      error: 'Push Rejected',
-      message: 'Push가 거부되었습니다',
+      error: "Push Rejected",
+      message: "Push가 거부되었습니다",
       reason: details.reason,
       hint: details.hint,
-      resolution
+      resolution,
     });
   }
 }
@@ -236,10 +240,10 @@ export class GitRebaseConflictException extends ConflictException {
   constructor(public readonly conflictFiles: string[]) {
     super({
       statusCode: 409,
-      error: 'Rebase Conflict',
-      message: 'Rebase 중 충돌이 발생했습니다',
+      error: "Rebase Conflict",
+      message: "Rebase 중 충돌이 발생했습니다",
       conflictFiles,
-      resolution: '충돌을 해결하고 git rebase --continue를 실행해주세요'
+      resolution: "충돌을 해결하고 git rebase --continue를 실행해주세요",
     });
   }
 }
@@ -251,10 +255,10 @@ export class GitUncommittedChangesException extends BadRequestException {
   constructor(public readonly changes: string[]) {
     super({
       statusCode: 400,
-      error: 'Uncommitted Changes',
-      message: '커밋되지 않은 변경사항이 있습니다',
+      error: "Uncommitted Changes",
+      message: "커밋되지 않은 변경사항이 있습니다",
       changes,
-      resolution: '변경사항을 커밋하거나 stash한 후 다시 시도해주세요'
+      resolution: "변경사항을 커밋하거나 stash한 후 다시 시도해주세요",
     });
   }
 }
@@ -266,10 +270,10 @@ export class GitStashConflictException extends ConflictException {
   constructor(public readonly conflictFiles: string[]) {
     super({
       statusCode: 409,
-      error: 'Stash Conflict',
-      message: 'Stash 적용 중 충돌이 발생했습니다',
+      error: "Stash Conflict",
+      message: "Stash 적용 중 충돌이 발생했습니다",
       conflictFiles,
-      resolution: '충돌을 수동으로 해결한 후 다시 시도해주세요'
+      resolution: "충돌을 수동으로 해결한 후 다시 시도해주세요",
     });
   }
 }

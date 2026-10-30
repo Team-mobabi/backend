@@ -1,5 +1,10 @@
 import { JwtService } from "@nestjs/jwt";
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException } from "@nestjs/common";
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+} from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { UsersService } from "@src/users/users.service";
 import { EmailService } from "@src/email/email.service";
@@ -38,7 +43,9 @@ export class AuthService {
     return { message: "회원가입이 완료되었습니다." };
   }
 
-  async signIn(signInDto: SignInDto): Promise<{ accessToken: string; refreshToken: string }> {
+  async signIn(
+    signInDto: SignInDto,
+  ): Promise<{ accessToken: string; refreshToken: string }> {
     const { email, password } = signInDto;
     const user = await this.usersService.findUserByEmail(email);
 

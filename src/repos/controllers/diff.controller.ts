@@ -27,11 +27,11 @@ export class DiffController {
 
   @ApiOperation({
     summary: "작업 디렉토리 변경사항 diff",
-    description: "Unstaged 변경사항의 diff를 조회합니다 (git diff)"
+    description: "Unstaged 변경사항의 diff를 조회합니다 (git diff)",
   })
   @ApiResponse({
     status: 200,
-    description: "Diff 정보 반환"
+    description: "Diff 정보 반환",
   })
   @Get(":repoId/diff/working")
   @HttpCode(HttpStatus.OK)
@@ -45,11 +45,11 @@ export class DiffController {
 
   @ApiOperation({
     summary: "Staged 변경사항 diff",
-    description: "Staged 변경사항의 diff를 조회합니다 (git diff --cached)"
+    description: "Staged 변경사항의 diff를 조회합니다 (git diff --cached)",
   })
   @ApiResponse({
     status: 200,
-    description: "Diff 정보 반환"
+    description: "Diff 정보 반환",
   })
   @Get(":repoId/diff/staged")
   @HttpCode(HttpStatus.OK)
@@ -69,11 +69,11 @@ export class DiffController {
 \`\`\`
 GET /repos/:repoId/diff/commits/:commitA/:commitB
 GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
-\`\`\``
+\`\`\``,
   })
   @ApiResponse({
     status: 200,
-    description: "Diff 정보 반환"
+    description: "Diff 정보 반환",
   })
   @Get(":repoId/diff/commits/:commitA/:commitB")
   @HttpCode(HttpStatus.OK)
@@ -84,16 +84,22 @@ GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
     @AuthUser() user: User,
     @Query("path") filePath?: string,
   ) {
-    return this.gitDiffService.getCommitDiff(repoId, user.id, commitA, commitB, filePath);
+    return this.gitDiffService.getCommitDiff(
+      repoId,
+      user.id,
+      commitA,
+      commitB,
+      filePath,
+    );
   }
 
   @ApiOperation({
     summary: "브랜치 간 diff",
-    description: "두 브랜치 간의 차이를 조회합니다"
+    description: "두 브랜치 간의 차이를 조회합니다",
   })
   @ApiResponse({
     status: 200,
-    description: "Diff 정보 반환"
+    description: "Diff 정보 반환",
   })
   @Get(":repoId/diff/branches")
   @HttpCode(HttpStatus.OK)
@@ -104,16 +110,22 @@ GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
     @AuthUser() user: User,
     @Query("path") filePath?: string,
   ) {
-    return this.gitDiffService.getBranchDiff(repoId, user.id, sourceBranch, targetBranch, filePath);
+    return this.gitDiffService.getBranchDiff(
+      repoId,
+      user.id,
+      sourceBranch,
+      targetBranch,
+      filePath,
+    );
   }
 
   @ApiOperation({
     summary: "특정 커밋의 변경사항",
-    description: "특정 커밋에서 변경된 내용을 조회합니다 (부모 커밋과 비교)"
+    description: "특정 커밋에서 변경된 내용을 조회합니다 (부모 커밋과 비교)",
   })
   @ApiResponse({
     status: 200,
-    description: "Diff 정보 반환"
+    description: "Diff 정보 반환",
   })
   @Get(":repoId/diff/commit/:hash")
   @HttpCode(HttpStatus.OK)
@@ -123,16 +135,21 @@ GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
     @AuthUser() user: User,
     @Query("path") filePath?: string,
   ) {
-    return this.gitDiffService.getCommitChanges(repoId, user.id, commitHash, filePath);
+    return this.gitDiffService.getCommitChanges(
+      repoId,
+      user.id,
+      commitHash,
+      filePath,
+    );
   }
 
   @ApiOperation({
     summary: "변경된 파일 목록",
-    description: "변경된 파일 목록만 조회 (diff 내용 없이)"
+    description: "변경된 파일 목록만 조회 (diff 내용 없이)",
   })
   @ApiResponse({
     status: 200,
-    description: "변경된 파일 목록"
+    description: "변경된 파일 목록",
   })
   @Get(":repoId/diff/files")
   @HttpCode(HttpStatus.OK)
@@ -142,35 +159,40 @@ GET /repos/:repoId/diff/commits/:commitA/:commitB?path=README.md
     @Query("commitA") commitA?: string,
     @Query("commitB") commitB?: string,
   ) {
-    return this.gitDiffService.getChangedFiles(repoId, user.id, commitA, commitB);
+    return this.gitDiffService.getChangedFiles(
+      repoId,
+      user.id,
+      commitA,
+      commitB,
+    );
   }
 
   @ApiOperation({
     summary: "Diff 통계",
-    description: "변경사항 통계 정보 (추가/삭제 라인 수)"
+    description: "변경사항 통계 정보 (추가/삭제 라인 수)",
   })
   @ApiResponse({
     status: 200,
     description: "통계 정보",
     schema: {
-      type: 'object',
+      type: "object",
       properties: {
-        files: { type: 'number', example: 3 },
-        additions: { type: 'number', example: 125 },
-        deletions: { type: 'number', example: 42 },
+        files: { type: "number", example: 3 },
+        additions: { type: "number", example: 125 },
+        deletions: { type: "number", example: 42 },
         fileStats: {
-          type: 'array',
+          type: "array",
           items: {
-            type: 'object',
+            type: "object",
             properties: {
-              path: { type: 'string' },
-              additions: { type: 'number' },
-              deletions: { type: 'number' }
-            }
-          }
-        }
-      }
-    }
+              path: { type: "string" },
+              additions: { type: "number" },
+              deletions: { type: "number" },
+            },
+          },
+        },
+      },
+    },
   })
   @Get(":repoId/diff/stats")
   @HttpCode(HttpStatus.OK)

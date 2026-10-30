@@ -52,7 +52,9 @@ async function bootstrap() {
 
   // "Repos" 태그 제거 (Controller 경로에서 자동 생성된 태그)
   if (document.tags) {
-    document.tags = document.tags.filter((tag: { name: string }) => tag.name !== 'Repos');
+    document.tags = document.tags.filter(
+      (tag: { name: string }) => tag.name !== "Repos",
+    );
   }
 
   // 모든 엔드포인트에서 "Repos" 태그 제거

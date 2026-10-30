@@ -48,7 +48,8 @@ export class ReposController {
 
   @ApiOperation({
     summary: "레포지토리 삭제",
-    description: "레포지토리와 관련된 모든 데이터를 삭제합니다. 로컬 git 디렉토리, 리모트 디렉토리, DB 엔티티가 모두 삭제됩니다."
+    description:
+      "레포지토리와 관련된 모든 데이터를 삭제합니다. 로컬 git 디렉토리, 리모트 디렉토리, DB 엔티티가 모두 삭제됩니다.",
   })
   @ApiResponse({
     status: 200,
@@ -56,9 +57,9 @@ export class ReposController {
     schema: {
       type: "object",
       properties: {
-        success: { type: "boolean", example: true }
-      }
-    }
+        success: { type: "boolean", example: true },
+      },
+    },
   })
   @ApiResponse({
     status: 403,

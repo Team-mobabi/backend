@@ -16,7 +16,6 @@ import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { User } from "@src/users/entities/user.entity";
 import { EmailVerification } from "@src/email/entities/email-verification.entity";
 
-
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -32,7 +31,14 @@ import { EmailVerification } from "@src/email/entities/email-verification.entity
         username: configService.get<string>("DB_USERNAME"),
         password: configService.get<string>("DB_PASSWORD"),
         database: configService.get<string>("DB_DATABASE"),
-        entities: [Repo, PullRequest, PrReview, RepoCollaborator, User, EmailVerification],
+        entities: [
+          Repo,
+          PullRequest,
+          PrReview,
+          RepoCollaborator,
+          User,
+          EmailVerification,
+        ],
         synchronize: configService.get<string>("ENV") !== "prod",
       }),
       inject: [ConfigService],

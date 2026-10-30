@@ -11,11 +11,11 @@ export interface AIResolutionResult {
 }
 
 export enum ConfidenceLevel {
-  VERY_HIGH = "VERY_HIGH",     // 90-100: 자동 적용 가능
-  HIGH = "HIGH",               // 70-89: 검토 후 적용 권장
-  MEDIUM = "MEDIUM",           // 50-69: 수동 검토 필요
-  LOW = "LOW",                 // 30-49: 주의 필요
-  VERY_LOW = "VERY_LOW",       // 0-29: 수동 해결 강력 권장
+  VERY_HIGH = "VERY_HIGH", // 90-100: 자동 적용 가능
+  HIGH = "HIGH", // 70-89: 검토 후 적용 권장
+  MEDIUM = "MEDIUM", // 50-69: 수동 검토 필요
+  LOW = "LOW", // 30-49: 주의 필요
+  VERY_LOW = "VERY_LOW", // 0-29: 수동 해결 강력 권장
 }
 
 export interface ConflictContext {
@@ -36,8 +36,9 @@ export class AIConflictResolverService {
     const apiKey = this.configService.get<string>("CLAUDE_API_KEY");
 
     if (!apiKey) {
-      this.logger.warn("CLAUDE_API_KEY is not configured. AI conflict resolution will not be available.");
-
+      this.logger.warn(
+        "CLAUDE_API_KEY is not configured. AI conflict resolution will not be available.",
+      );
     } else {
       this.anthropic = new Anthropic({
         apiKey,
@@ -56,20 +57,26 @@ export class AIConflictResolverService {
     context?: ConflictContext,
   ): Promise<AIResolutionResult> {
     if (!this.anthropic) {
-      throw new Error("AI conflict resolution is not available. CLAUDE_API_KEY is not configured.");
+      throw new Error(
+        "AI conflict resolution is not available. CLAUDE_API_KEY is not configured.",
+      );
     }
 
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
       try {
-        this.logger.log(`충돌 해결 시도 ${attempt}/${this.MAX_RETRIES}: ${filePath}`);
+        this.logger.log(
+          `충돌 해결 시도 ${attempt}/${this.MAX_RETRIES}: ${filePath}`,
+        );
 
         const result = await this.callAI(conflictContent, filePath, context);
 
         // 신뢰도가 너무 낮으면 재시도 (마지막 시도가 아닌 경우)
         if (result.confidence < 0.5 && attempt < this.MAX_RETRIES) {
-          this.logger.warn(`낮은 신뢰도 (${result.confidence * 100}%), 재시도...`);
+          this.logger.warn(
+            `낮은 신뢰도 (${result.confidence * 100}%), 재시도...`,
+          );
           continue;
         }
 
@@ -84,7 +91,9 @@ export class AIConflictResolverService {
       }
     }
 
-    throw new Error(`AI conflict resolution failed after ${this.MAX_RETRIES} attempts: ${lastError?.message}`);
+    throw new Error(
+      `AI conflict resolution failed after ${this.MAX_RETRIES} attempts: ${lastError?.message}`,
+    );
   }
 
   /**
@@ -95,9 +104,15 @@ export class AIConflictResolverService {
     filePath: string,
     context?: ConflictContext,
   ): Promise<AIResolutionResult> {
-    const fileExtension = filePath.split('.').pop()?.toLowerCase() || '';
+    const fileExtension = filePath.split(".").pop()?.toLowerCase() || "";
     const language = this.getLanguage(fileExtension);
-    const prompt = this.buildPrompt(conflictContent, filePath, fileExtension, language, context);
+    const prompt = this.buildPrompt(
+      conflictContent,
+      filePath,
+      fileExtension,
+      language,
+      context,
+    );
 
     const message = await this.anthropic.messages.create({
       model: "claude-sonnet-4-5-20250929",
@@ -112,11 +127,11 @@ export class AIConflictResolverService {
     });
 
     const firstContent = message.content[0];
-    const responseText = firstContent.type === 'text' ? firstContent.text : '';
+    const responseText = firstContent.type === "text" ? firstContent.text : "";
 
     // 응답이 잘렸는지 확인
-    if (message.stop_reason === 'max_tokens') {
-      this.logger.warn('⚠️ AI 응답이 max_tokens로 인해 잘렸습니다!');
+    if (message.stop_reason === "max_tokens") {
+      this.logger.warn("⚠️ AI 응답이 max_tokens로 인해 잘렸습니다!");
     }
 
     return this.parseResponse(responseText, conflictContent);
@@ -127,31 +142,31 @@ export class AIConflictResolverService {
    */
   private getLanguage(fileExtension: string): string {
     const languageMap: Record<string, string> = {
-      'js': 'JavaScript',
-      'jsx': 'JavaScript (React)',
-      'ts': 'TypeScript',
-      'tsx': 'TypeScript (React)',
-      'py': 'Python',
-      'java': 'Java',
-      'cpp': 'C++',
-      'c': 'C',
-      'go': 'Go',
-      'rs': 'Rust',
-      'rb': 'Ruby',
-      'php': 'PHP',
-      'swift': 'Swift',
-      'kt': 'Kotlin',
-      'cs': 'C#',
-      'html': 'HTML',
-      'css': 'CSS',
-      'scss': 'SCSS',
-      'json': 'JSON',
-      'yaml': 'YAML',
-      'yml': 'YAML',
-      'md': 'Markdown',
-      'txt': 'Plain Text',
+      js: "JavaScript",
+      jsx: "JavaScript (React)",
+      ts: "TypeScript",
+      tsx: "TypeScript (React)",
+      py: "Python",
+      java: "Java",
+      cpp: "C++",
+      c: "C",
+      go: "Go",
+      rs: "Rust",
+      rb: "Ruby",
+      php: "PHP",
+      swift: "Swift",
+      kt: "Kotlin",
+      cs: "C#",
+      html: "HTML",
+      css: "CSS",
+      scss: "SCSS",
+      json: "JSON",
+      yaml: "YAML",
+      yml: "YAML",
+      md: "Markdown",
+      txt: "Plain Text",
     };
-    return languageMap[fileExtension] || 'Unknown';
+    return languageMap[fileExtension] || "Unknown";
   }
 
   /**
@@ -165,13 +180,15 @@ export class AIConflictResolverService {
     context?: ConflictContext,
   ): string {
     // 컨텍스트 정보 구성
-    const contextInfo = context ? `
+    const contextInfo = context
+      ? `
 **Branch Context:**
-- Our Branch (HEAD): ${context.ourBranch || 'unknown'}
-- Their Branch (merging): ${context.theirBranch || 'unknown'}
-- Our Commit Message: "${context.ourCommitMessage || 'N/A'}"
-- Their Commit Message: "${context.theirCommitMessage || 'N/A'}"
-` : '';
+- Our Branch (HEAD): ${context.ourBranch || "unknown"}
+- Their Branch (merging): ${context.theirBranch || "unknown"}
+- Our Commit Message: "${context.ourCommitMessage || "N/A"}"
+- Their Commit Message: "${context.theirCommitMessage || "N/A"}"
+`
+      : "";
 
     return `You are an expert Git merge conflict resolver.
 
@@ -301,13 +318,16 @@ CONFIDENCE: [0-100 숫자만]
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * AI 응답을 파싱하여 구조화된 결과로 변환합니다
    */
-  private parseResponse(text: string, originalConflict: string): AIResolutionResult {
+  private parseResponse(
+    text: string,
+    originalConflict: string,
+  ): AIResolutionResult {
     // 🔍 디버깅: AI 원본 응답 로그 출력
     this.logger.log("=== AI 원본 응답 시작 ===");
     this.logger.log(text);
@@ -315,12 +335,10 @@ CONFIDENCE: [0-100 숫자만]
 
     const removeMarkdownBullets = (text: string): string => {
       if (!text) return text;
-      return text.replace(/^[*-]\s+/gm, '');
+      return text.replace(/^[*-]\s+/gm, "");
     };
 
-    const codeMatch = text.match(
-      /MERGED_CODE:\s*```\w*\n([\s\S]*?)\n```/,
-    );
+    const codeMatch = text.match(/MERGED_CODE:\s*```\w*\n([\s\S]*?)\n```/);
 
     const explanationMatch = text.match(
       /EXPLANATION:\s*([\s\S]*?)(?:\n\nCONFIDENCE:|\nCONFIDENCE:|$)/,
@@ -387,15 +405,19 @@ CONFIDENCE: [0-100 숫자만]
   /**
    * 원본 코드의 핵심 식별자가 보존되었는지 검증
    */
-  private validateCodePreservation(resolvedCode: string, originalConflict: string): void {
+  private validateCodePreservation(
+    resolvedCode: string,
+    originalConflict: string,
+  ): void {
     // 충돌 마커 제거하고 양쪽 코드에서 식별자 추출
     const cleanOriginal = originalConflict
-      .replace(/<<<<<<< .*/g, '')
-      .replace(/=======/g, '')
-      .replace(/>>>>>>> .*/g, '');
+      .replace(/<<<<<<< .*/g, "")
+      .replace(/=======/g, "")
+      .replace(/>>>>>>> .*/g, "");
 
     // 함수명, 변수명 등 핵심 식별자 패턴
-    const identifierPattern = /(?:function|const|let|var|class|interface|type)\s+(\w+)/g;
+    const identifierPattern =
+      /(?:function|const|let|var|class|interface|type)\s+(\w+)/g;
     const originalIdentifiers = new Set<string>();
     let match;
 
@@ -405,14 +427,16 @@ CONFIDENCE: [0-100 숫자만]
 
     // 해결된 코드에서 핵심 식별자가 누락되었는지 확인 (경고만, 에러는 아님)
     const missingIdentifiers: string[] = [];
-    originalIdentifiers.forEach(id => {
+    originalIdentifiers.forEach((id) => {
       if (!resolvedCode.includes(id)) {
         missingIdentifiers.push(id);
       }
     });
 
     if (missingIdentifiers.length > 0) {
-      this.logger.warn(`일부 식별자가 해결된 코드에서 누락됨: ${missingIdentifiers.join(', ')}`);
+      this.logger.warn(
+        `일부 식별자가 해결된 코드에서 누락됨: ${missingIdentifiers.join(", ")}`,
+      );
     }
   }
 

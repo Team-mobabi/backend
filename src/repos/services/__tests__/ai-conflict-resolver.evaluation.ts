@@ -8,11 +8,19 @@
  * 4. 의미 보존율 (Semantic Preservation) - 핵심 키워드 보존 비율
  */
 
-import { AIConflictResolverService, AIResolutionResult, ConfidenceLevel } from '../ai-conflict-resolver.service';
-import { testCases, ConflictTestCase, testCaseStats } from './conflict-test-cases';
-import * as ts from 'typescript';
-import * as fs from 'fs';
-import * as path from 'path';
+import {
+  AIConflictResolverService,
+  AIResolutionResult,
+  ConfidenceLevel,
+} from "../ai-conflict-resolver.service";
+import {
+  testCases,
+  ConflictTestCase,
+  testCaseStats,
+} from "./conflict-test-cases";
+import * as ts from "typescript";
+import * as fs from "fs";
+import * as path from "path";
 
 // ============================================
 // 타입 정의
@@ -94,28 +102,32 @@ export class ConflictResolverEvaluator {
    * 전체 테스트 케이스 실행
    */
   async runFullEvaluation(): Promise<AggregatedMetrics> {
-    console.log('========================================');
-    console.log('AI 충돌 해결 시스템 평가 시작');
+    console.log("========================================");
+    console.log("AI 충돌 해결 시스템 평가 시작");
     console.log(`총 테스트 케이스: ${testCases.length}개`);
-    console.log('========================================\n');
+    console.log("========================================\n");
 
     this.results = [];
 
     for (let i = 0; i < testCases.length; i++) {
       const testCase = testCases[i];
-      console.log(`[${i + 1}/${testCases.length}] ${testCase.id}: ${testCase.description}`);
+      console.log(
+        `[${i + 1}/${testCases.length}] ${testCase.id}: ${testCase.description}`,
+      );
 
       const result = await this.evaluateSingleCase(testCase);
       this.results.push(result);
 
       // 결과 출력
-      const status = result.isCorrect ? '✅ PASS' : '❌ FAIL';
-      console.log(`  ${status} | Confidence: ${(result.aiConfidence * 100).toFixed(1)}% | Syntax: ${result.syntaxValid ? 'OK' : 'ERROR'}`);
+      const status = result.isCorrect ? "✅ PASS" : "❌ FAIL";
+      console.log(
+        `  ${status} | Confidence: ${(result.aiConfidence * 100).toFixed(1)}% | Syntax: ${result.syntaxValid ? "OK" : "ERROR"}`,
+      );
 
       if (result.error) {
         console.log(`  ⚠️ Error: ${result.error}`);
       }
-      console.log('');
+      console.log("");
     }
 
     const metrics = this.calculateMetrics();
@@ -127,14 +139,16 @@ export class ConflictResolverEvaluator {
   /**
    * 단일 테스트 케이스 평가
    */
-  async evaluateSingleCase(testCase: ConflictTestCase): Promise<EvaluationResult> {
+  async evaluateSingleCase(
+    testCase: ConflictTestCase,
+  ): Promise<EvaluationResult> {
     const startTime = Date.now();
 
     try {
       const aiResult = await this.resolver.suggestResolution(
         testCase.conflict,
         testCase.filePath,
-        testCase.context
+        testCase.context,
       );
 
       const executionTime = Date.now() - startTime;
@@ -143,16 +157,19 @@ export class ConflictResolverEvaluator {
       const { isCorrect, isAlternative } = this.evaluateCorrectness(
         aiResult.resolvedCode,
         testCase.expectedResolution,
-        testCase.acceptableAlternatives
+        testCase.acceptableAlternatives,
       );
 
       // 문법 검사
-      const syntaxValid = this.checkSyntax(aiResult.resolvedCode, testCase.language);
+      const syntaxValid = this.checkSyntax(
+        aiResult.resolvedCode,
+        testCase.language,
+      );
 
       // 키워드 보존 검사
       const keywordsPreserved = this.checkKeywordPreservation(
         aiResult.resolvedCode,
-        testCase.keywords
+        testCase.keywords,
       );
 
       return {
@@ -176,10 +193,10 @@ export class ConflictResolverEvaluator {
         type: testCase.type,
         difficulty: testCase.difficulty,
         language: testCase.language,
-        aiResolution: '',
+        aiResolution: "",
         aiConfidence: 0,
         aiConfidenceLevel: ConfidenceLevel.VERY_LOW,
-        aiExplanation: '',
+        aiExplanation: "",
         isCorrect: false,
         isAlternativeAccepted: false,
         syntaxValid: false,
@@ -196,10 +213,10 @@ export class ConflictResolverEvaluator {
   private evaluateCorrectness(
     aiResult: string,
     expected: string,
-    alternatives?: string[]
+    alternatives?: string[],
   ): { isCorrect: boolean; isAlternative: boolean } {
     // 공백 정규화
-    const normalize = (s: string) => s.replace(/\s+/g, ' ').trim();
+    const normalize = (s: string) => s.replace(/\s+/g, " ").trim();
 
     const normalizedAi = normalize(aiResult);
     const normalizedExpected = normalize(expected);
@@ -219,7 +236,10 @@ export class ConflictResolverEvaluator {
     }
 
     // 유사도 기반 평가 (80% 이상이면 정답으로 간주)
-    const similarity = this.calculateSimilarity(normalizedAi, normalizedExpected);
+    const similarity = this.calculateSimilarity(
+      normalizedAi,
+      normalizedExpected,
+    );
     if (similarity >= 0.8) {
       return { isCorrect: true, isAlternative: false };
     }
@@ -234,7 +254,7 @@ export class ConflictResolverEvaluator {
     const tokensA = new Set(a.split(/\s+/));
     const tokensB = new Set(b.split(/\s+/));
 
-    const intersection = new Set([...tokensA].filter(x => tokensB.has(x)));
+    const intersection = new Set([...tokensA].filter((x) => tokensB.has(x)));
     const union = new Set([...tokensA, ...tokensB]);
 
     return intersection.size / union.size;
@@ -246,18 +266,18 @@ export class ConflictResolverEvaluator {
   private checkSyntax(code: string, language: string): boolean {
     try {
       switch (language.toLowerCase()) {
-        case 'typescript':
-        case 'javascript':
-        case 'javascript (react)':
-        case 'typescript (react)':
+        case "typescript":
+        case "javascript":
+        case "javascript (react)":
+        case "typescript (react)":
           return this.checkTsSyntax(code);
-        case 'json':
+        case "json":
           JSON.parse(code);
           return true;
-        case 'python':
+        case "python":
           // Python 문법 검사는 간단한 휴리스틱 사용
           return this.checkPythonSyntax(code);
-        case 'css':
+        case "css":
           return this.checkCssSyntax(code);
         default:
           // 알 수 없는 언어는 기본적인 괄호 매칭만 확인
@@ -270,10 +290,10 @@ export class ConflictResolverEvaluator {
 
   private checkTsSyntax(code: string): boolean {
     const sourceFile = ts.createSourceFile(
-      'temp.ts',
+      "temp.ts",
       code,
       ts.ScriptTarget.Latest,
-      true
+      true,
     );
 
     // 파싱 에러 확인
@@ -283,15 +303,19 @@ export class ConflictResolverEvaluator {
 
   private checkPythonSyntax(code: string): boolean {
     // 간단한 휴리스틱: 들여쓰기, 콜론, 괄호 매칭
-    const lines = code.split('\n');
+    const lines = code.split("\n");
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
+      if (!trimmed || trimmed.startsWith("#")) continue;
 
       // def/class/if/for/while 뒤에 콜론이 있어야 함
-      if (/^(def|class|if|elif|else|for|while|try|except|finally|with)\s/.test(trimmed)) {
-        if (!trimmed.endsWith(':')) {
+      if (
+        /^(def|class|if|elif|else|for|while|try|except|finally|with)\s/.test(
+          trimmed,
+        )
+      ) {
+        if (!trimmed.endsWith(":")) {
           return false;
         }
       }
@@ -320,12 +344,12 @@ export class ConflictResolverEvaluator {
 
   private checkBracketMatching(code: string): boolean {
     const stack: string[] = [];
-    const pairs: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
+    const pairs: Record<string, string> = { ")": "(", "]": "[", "}": "{" };
 
     for (const char of code) {
-      if ('([{'.includes(char)) {
+      if ("([{".includes(char)) {
         stack.push(char);
-      } else if (')]}}'.includes(char)) {
+      } else if (")]}}".includes(char)) {
         if (stack.pop() !== pairs[char]) {
           return false;
         }
@@ -355,31 +379,30 @@ export class ConflictResolverEvaluator {
    * 집계 메트릭 계산
    */
   private calculateMetrics(): AggregatedMetrics {
-    const successful = this.results.filter(r => !r.error);
-    const failed = this.results.filter(r => r.error);
+    const successful = this.results.filter((r) => !r.error);
+    const failed = this.results.filter((r) => r.error);
 
     // 정확도
-    const correct = successful.filter(r => r.isCorrect);
+    const correct = successful.filter((r) => r.isCorrect);
     const accuracy = correct.length / this.results.length;
 
     // 유형별 정확도
     const accuracyByType: Record<string, number> = {};
-    const types = [...new Set(this.results.map(r => r.type))];
+    const types = [...new Set(this.results.map((r) => r.type))];
     for (const type of types) {
-      const typeResults = this.results.filter(r => r.type === type);
-      const typeCorrect = typeResults.filter(r => r.isCorrect);
+      const typeResults = this.results.filter((r) => r.type === type);
+      const typeCorrect = typeResults.filter((r) => r.isCorrect);
       accuracyByType[type] = typeCorrect.length / typeResults.length;
     }
 
     // 난이도별 정확도
     const accuracyByDifficulty: Record<string, number> = {};
-    const difficulties = ['easy', 'medium', 'hard'];
+    const difficulties = ["easy", "medium", "hard"];
     for (const diff of difficulties) {
-      const diffResults = this.results.filter(r => r.difficulty === diff);
-      const diffCorrect = diffResults.filter(r => r.isCorrect);
-      accuracyByDifficulty[diff] = diffResults.length > 0
-        ? diffCorrect.length / diffResults.length
-        : 0;
+      const diffResults = this.results.filter((r) => r.difficulty === diff);
+      const diffCorrect = diffResults.filter((r) => r.isCorrect);
+      accuracyByDifficulty[diff] =
+        diffResults.length > 0 ? diffCorrect.length / diffResults.length : 0;
     }
 
     // ECE (Expected Calibration Error) 계산
@@ -387,11 +410,13 @@ export class ConflictResolverEvaluator {
     const ece = this.calculateECE(calibrationByBin);
 
     // 문법 유효성
-    const syntaxValid = successful.filter(r => r.syntaxValid);
+    const syntaxValid = successful.filter((r) => r.syntaxValid);
     const syntaxValidityRate = syntaxValid.length / successful.length;
 
     // 키워드 보존율
-    const avgKeywordPreservation = successful.reduce((sum, r) => sum + r.keywordsPreserved, 0) / successful.length;
+    const avgKeywordPreservation =
+      successful.reduce((sum, r) => sum + r.keywordsPreserved, 0) /
+      successful.length;
 
     // 신뢰도 분포
     const confidenceDistribution: Record<ConfidenceLevel, number> = {
@@ -406,7 +431,10 @@ export class ConflictResolverEvaluator {
     }
 
     // 실행 시간
-    const totalTime = this.results.reduce((sum, r) => sum + r.executionTimeMs, 0);
+    const totalTime = this.results.reduce(
+      (sum, r) => sum + r.executionTimeMs,
+      0,
+    );
     const avgTime = totalTime / this.results.length;
 
     return {
@@ -429,14 +457,16 @@ export class ConflictResolverEvaluator {
   /**
    * 신뢰도 구간별 보정 계산
    */
-  private calculateCalibrationBins(results: EvaluationResult[]): CalibrationBin[] {
+  private calculateCalibrationBins(
+    results: EvaluationResult[],
+  ): CalibrationBin[] {
     const bins: CalibrationBin[] = [];
     const binSize = 0.1; // 10% 단위
 
     for (let binStart = 0; binStart < 1; binStart += binSize) {
       const binEnd = binStart + binSize;
       const binResults = results.filter(
-        r => r.aiConfidence >= binStart && r.aiConfidence < binEnd
+        (r) => r.aiConfidence >= binStart && r.aiConfidence < binEnd,
       );
 
       if (binResults.length === 0) {
@@ -450,8 +480,11 @@ export class ConflictResolverEvaluator {
         continue;
       }
 
-      const avgConfidence = binResults.reduce((sum, r) => sum + r.aiConfidence, 0) / binResults.length;
-      const actualAccuracy = binResults.filter(r => r.isCorrect).length / binResults.length;
+      const avgConfidence =
+        binResults.reduce((sum, r) => sum + r.aiConfidence, 0) /
+        binResults.length;
+      const actualAccuracy =
+        binResults.filter((r) => r.isCorrect).length / binResults.length;
 
       bins.push({
         binStart,
@@ -487,72 +520,88 @@ export class ConflictResolverEvaluator {
    * 결과 리포트 출력
    */
   private printReport(metrics: AggregatedMetrics): void {
-    console.log('\n========================================');
-    console.log('           평가 결과 리포트');
-    console.log('========================================\n');
+    console.log("\n========================================");
+    console.log("           평가 결과 리포트");
+    console.log("========================================\n");
 
-    console.log('📊 기본 통계');
-    console.log('─'.repeat(40));
+    console.log("📊 기본 통계");
+    console.log("─".repeat(40));
     console.log(`총 테스트 케이스: ${metrics.totalCases}`);
-    console.log(`성공: ${metrics.successfulCases} | 실패: ${metrics.failedCases}`);
-    console.log('');
+    console.log(
+      `성공: ${metrics.successfulCases} | 실패: ${metrics.failedCases}`,
+    );
+    console.log("");
 
-    console.log('🎯 정확도 (Accuracy)');
-    console.log('─'.repeat(40));
+    console.log("🎯 정확도 (Accuracy)");
+    console.log("─".repeat(40));
     console.log(`전체: ${(metrics.accuracy * 100).toFixed(1)}%`);
-    console.log('');
-    console.log('유형별:');
+    console.log("");
+    console.log("유형별:");
     for (const [type, acc] of Object.entries(metrics.accuracyByType)) {
       console.log(`  - ${type}: ${(acc * 100).toFixed(1)}%`);
     }
-    console.log('');
-    console.log('난이도별:');
+    console.log("");
+    console.log("난이도별:");
     for (const [diff, acc] of Object.entries(metrics.accuracyByDifficulty)) {
       console.log(`  - ${diff}: ${(acc * 100).toFixed(1)}%`);
     }
-    console.log('');
+    console.log("");
 
-    console.log('📐 신뢰도 보정 (Calibration)');
-    console.log('─'.repeat(40));
-    console.log(`ECE (Expected Calibration Error): ${metrics.expectedCalibrationError.toFixed(4)}`);
-    console.log('  (낮을수록 좋음, 0 = 완벽한 보정)');
-    console.log('');
-    console.log('신뢰도 구간별 실제 정확도:');
+    console.log("📐 신뢰도 보정 (Calibration)");
+    console.log("─".repeat(40));
+    console.log(
+      `ECE (Expected Calibration Error): ${metrics.expectedCalibrationError.toFixed(4)}`,
+    );
+    console.log("  (낮을수록 좋음, 0 = 완벽한 보정)");
+    console.log("");
+    console.log("신뢰도 구간별 실제 정확도:");
     for (const bin of metrics.calibrationByBin) {
       if (bin.count === 0) continue;
       const range = `${(bin.binStart * 100).toFixed(0)}-${(bin.binEnd * 100).toFixed(0)}%`;
-      const bar = '█'.repeat(Math.round(bin.actualAccuracy * 20));
-      console.log(`  ${range.padEnd(8)} | ${bar.padEnd(20)} ${(bin.actualAccuracy * 100).toFixed(1)}% (n=${bin.count})`);
+      const bar = "█".repeat(Math.round(bin.actualAccuracy * 20));
+      console.log(
+        `  ${range.padEnd(8)} | ${bar.padEnd(20)} ${(bin.actualAccuracy * 100).toFixed(1)}% (n=${bin.count})`,
+      );
     }
-    console.log('');
+    console.log("");
 
-    console.log('✅ 문법 유효성');
-    console.log('─'.repeat(40));
-    console.log(`유효한 코드 생성 비율: ${(metrics.syntaxValidityRate * 100).toFixed(1)}%`);
-    console.log('');
+    console.log("✅ 문법 유효성");
+    console.log("─".repeat(40));
+    console.log(
+      `유효한 코드 생성 비율: ${(metrics.syntaxValidityRate * 100).toFixed(1)}%`,
+    );
+    console.log("");
 
-    console.log('🔑 의미 보존율');
-    console.log('─'.repeat(40));
-    console.log(`평균 키워드 보존율: ${(metrics.averageKeywordPreservation * 100).toFixed(1)}%`);
-    console.log('');
+    console.log("🔑 의미 보존율");
+    console.log("─".repeat(40));
+    console.log(
+      `평균 키워드 보존율: ${(metrics.averageKeywordPreservation * 100).toFixed(1)}%`,
+    );
+    console.log("");
 
-    console.log('📈 신뢰도 분포');
-    console.log('─'.repeat(40));
-    for (const [level, count] of Object.entries(metrics.confidenceDistribution)) {
-      const percentage = (count / metrics.successfulCases * 100).toFixed(1);
+    console.log("📈 신뢰도 분포");
+    console.log("─".repeat(40));
+    for (const [level, count] of Object.entries(
+      metrics.confidenceDistribution,
+    )) {
+      const percentage = ((count / metrics.successfulCases) * 100).toFixed(1);
       console.log(`  ${level.padEnd(12)}: ${count} (${percentage}%)`);
     }
-    console.log('');
+    console.log("");
 
-    console.log('⏱️ 성능');
-    console.log('─'.repeat(40));
-    console.log(`평균 실행 시간: ${metrics.averageExecutionTimeMs.toFixed(0)}ms`);
-    console.log(`총 실행 시간: ${(metrics.totalExecutionTimeMs / 1000).toFixed(1)}s`);
-    console.log('');
+    console.log("⏱️ 성능");
+    console.log("─".repeat(40));
+    console.log(
+      `평균 실행 시간: ${metrics.averageExecutionTimeMs.toFixed(0)}ms`,
+    );
+    console.log(
+      `총 실행 시간: ${(metrics.totalExecutionTimeMs / 1000).toFixed(1)}s`,
+    );
+    console.log("");
 
-    console.log('========================================');
-    console.log('           평가 완료');
-    console.log('========================================');
+    console.log("========================================");
+    console.log("           평가 완료");
+    console.log("========================================");
   }
 
   /**
@@ -575,20 +624,20 @@ export class ConflictResolverEvaluator {
    */
   saveResultsAsCsv(outputPath: string): void {
     const headers = [
-      'testCaseId',
-      'type',
-      'difficulty',
-      'language',
-      'isCorrect',
-      'aiConfidence',
-      'aiConfidenceLevel',
-      'syntaxValid',
-      'keywordsPreserved',
-      'executionTimeMs',
-      'error',
+      "testCaseId",
+      "type",
+      "difficulty",
+      "language",
+      "isCorrect",
+      "aiConfidence",
+      "aiConfidenceLevel",
+      "syntaxValid",
+      "keywordsPreserved",
+      "executionTimeMs",
+      "error",
     ];
 
-    const rows = this.results.map(r => [
+    const rows = this.results.map((r) => [
       r.testCaseId,
       r.type,
       r.difficulty,
@@ -599,10 +648,10 @@ export class ConflictResolverEvaluator {
       r.syntaxValid,
       r.keywordsPreserved.toFixed(4),
       r.executionTimeMs,
-      r.error || '',
+      r.error || "",
     ]);
 
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     fs.writeFileSync(outputPath, csv);
     console.log(`CSV 결과가 저장되었습니다: ${outputPath}`);
   }
@@ -616,7 +665,7 @@ export async function runEvaluation(): Promise<void> {
   // ConfigService 모킹 (테스트용)
   const mockConfigService = {
     get: (key: string) => {
-      if (key === 'CLAUDE_API_KEY') {
+      if (key === "CLAUDE_API_KEY") {
         return process.env.CLAUDE_API_KEY;
       }
       return undefined;
@@ -631,28 +680,33 @@ export async function runEvaluation(): Promise<void> {
     const metrics = await evaluator.runFullEvaluation();
 
     // 결과 저장
-    const outputDir = path.join(__dirname, 'evaluation-results');
+    const outputDir = path.join(__dirname, "evaluation-results");
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     evaluator.saveResults(path.join(outputDir, `results-${timestamp}.json`));
-    evaluator.saveResultsAsCsv(path.join(outputDir, `results-${timestamp}.csv`));
+    evaluator.saveResultsAsCsv(
+      path.join(outputDir, `results-${timestamp}.csv`),
+    );
 
     // 논문용 요약 출력
-    console.log('\n📝 논문용 요약 (복사하여 사용)');
-    console.log('═'.repeat(50));
+    console.log("\n📝 논문용 요약 (복사하여 사용)");
+    console.log("═".repeat(50));
     console.log(`| Metric | Value |`);
     console.log(`|--------|-------|`);
     console.log(`| Accuracy | ${(metrics.accuracy * 100).toFixed(1)}% |`);
     console.log(`| ECE | ${metrics.expectedCalibrationError.toFixed(4)} |`);
-    console.log(`| Syntax Validity | ${(metrics.syntaxValidityRate * 100).toFixed(1)}% |`);
-    console.log(`| Semantic Preservation | ${(metrics.averageKeywordPreservation * 100).toFixed(1)}% |`);
-    console.log('═'.repeat(50));
-
+    console.log(
+      `| Syntax Validity | ${(metrics.syntaxValidityRate * 100).toFixed(1)}% |`,
+    );
+    console.log(
+      `| Semantic Preservation | ${(metrics.averageKeywordPreservation * 100).toFixed(1)}% |`,
+    );
+    console.log("═".repeat(50));
   } catch (error) {
-    console.error('평가 실행 중 오류 발생:', error);
+    console.error("평가 실행 중 오류 발생:", error);
     process.exit(1);
   }
 }

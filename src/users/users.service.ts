@@ -1,5 +1,9 @@
 import { Repository, Like } from "typeorm";
-import { Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "@src/users/entities/user.entity";
 import * as bcrypt from "bcrypt";
@@ -57,7 +61,9 @@ export class UsersService {
     const salt = await bcrypt.genSalt();
     const newPasswordHash = await bcrypt.hash(newPassword, salt);
 
-    await this.usersRepository.update(userId, { passwordHash: newPasswordHash });
+    await this.usersRepository.update(userId, {
+      passwordHash: newPasswordHash,
+    });
 
     return { message: "비밀번호가 성공적으로 변경되었습니다." };
   }
@@ -74,9 +80,14 @@ export class UsersService {
     return { message: "회원 탈퇴가 완료되었습니다." };
   }
 
-  async updateRefreshToken(userId: string, refreshToken: string | null | undefined): Promise<void> {
+  async updateRefreshToken(
+    userId: string,
+    refreshToken: string | null | undefined,
+  ): Promise<void> {
     // undefined를 null로 변환 (TypeORM은 undefined를 처리하지 못함)
-    await this.usersRepository.update(userId, { refreshToken: refreshToken ?? null });
+    await this.usersRepository.update(userId, {
+      refreshToken: refreshToken ?? null,
+    });
   }
 
   async findUserByRefreshToken(refreshToken: string): Promise<User | null> {

@@ -163,11 +163,13 @@ export class BranchService extends BaseRepoService {
       const status = await git.status();
       if (status.conflicted && status.conflicted.length > 0) {
         throw new ConflictException(
-          `이미 해결되지 않은 충돌이 있습니다. 충돌을 먼저 해결하거나 merge를 중단하세요. 충돌 파일: ${status.conflicted.join(", ")}`
+          `이미 해결되지 않은 충돌이 있습니다. 충돌을 먼저 해결하거나 merge를 중단하세요. 충돌 파일: ${status.conflicted.join(", ")}`,
         );
       }
 
-      const currentBranch = (await git.revparse(["--abbrev-ref", "HEAD"])).trim();
+      const currentBranch = (
+        await git.revparse(["--abbrev-ref", "HEAD"])
+      ).trim();
       const finalTargetBranch = targetBranch || currentBranch;
 
       if (currentBranch !== finalTargetBranch) {

@@ -30,7 +30,9 @@ export class AIAssistantService {
     const apiKey = this.configService.get<string>("CLAUDE_API_KEY");
 
     if (!apiKey) {
-      console.warn("CLAUDE_API_KEY is not configured. AI assistant will not be available.");
+      console.warn(
+        "CLAUDE_API_KEY is not configured. AI assistant will not be available.",
+      );
     } else {
       this.anthropic = new Anthropic({
         apiKey,
@@ -43,7 +45,9 @@ export class AIAssistantService {
     gitContext?: GitContext,
   ): Promise<AIAssistantResponse> {
     if (!this.anthropic) {
-      throw new Error("AI assistant is not available. CLAUDE_API_KEY is not configured.");
+      throw new Error(
+        "AI assistant is not available. CLAUDE_API_KEY is not configured.",
+      );
     }
 
     try {
@@ -121,16 +125,21 @@ RELATED_CONCEPTS:
       });
 
       const firstContent = message.content[0];
-      const responseText = firstContent.type === "text" ? firstContent.text : "";
+      const responseText =
+        firstContent.type === "text" ? firstContent.text : "";
       return this.parseResponse(responseText);
     } catch (error) {
       throw new Error(`AI assistant failed: ${error.message}`);
     }
   }
 
-  async suggestNextAction(gitContext: GitContext): Promise<AIAssistantResponse> {
+  async suggestNextAction(
+    gitContext: GitContext,
+  ): Promise<AIAssistantResponse> {
     if (!this.anthropic) {
-      throw new Error("AI assistant is not available. CLAUDE_API_KEY is not configured.");
+      throw new Error(
+        "AI assistant is not available. CLAUDE_API_KEY is not configured.",
+      );
     }
 
     try {
@@ -173,7 +182,8 @@ RELATED_CONCEPTS:
       });
 
       const firstContent = message.content[0];
-      const responseText = firstContent.type === "text" ? firstContent.text : "";
+      const responseText =
+        firstContent.type === "text" ? firstContent.text : "";
       return this.parseResponse(responseText);
     } catch (error) {
       throw new Error(`AI assistant failed: ${error.message}`);
@@ -238,7 +248,7 @@ RELATED_CONCEPTS:
 
     const removeMarkdownBullets = (text: string): string => {
       if (!text) return text;
-      return text.replace(/^[*-]\s+/gm, '');
+      return text.replace(/^[*-]\s+/gm, "");
     };
 
     const rawAnswer =
@@ -262,7 +272,8 @@ RELATED_CONCEPTS:
 
     return {
       answer,
-      suggestedActions: suggestedActions.length > 0 ? suggestedActions : undefined,
+      suggestedActions:
+        suggestedActions.length > 0 ? suggestedActions : undefined,
       relatedConcepts: relatedConcepts.length > 0 ? relatedConcepts : undefined,
     };
   }

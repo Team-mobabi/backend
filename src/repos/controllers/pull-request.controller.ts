@@ -21,7 +21,10 @@ import { GitDiffService } from "@src/repos/services/git-diff.service";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { MergePullRequestDto } from "@src/repos/dto/merge-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
-import { PullRequestStatus, PullRequest } from "@src/repos/entities/pull-request.entity";
+import {
+  PullRequestStatus,
+  PullRequest,
+} from "@src/repos/entities/pull-request.entity";
 import { PrReview } from "@src/repos/entities/pr-review.entity";
 import { User } from "@src/users/entities/user.entity";
 import { AuthUser } from "@src/repos/auth-user.decorator";
@@ -58,7 +61,7 @@ export class PullRequestController {
 
   @ApiOperation({
     summary: "Pull Request 목록 조회",
-    description: "협업자/소유자는 레포지토리의 모든 PR을 조회할 수 있습니다"
+    description: "협업자/소유자는 레포지토리의 모든 PR을 조회할 수 있습니다",
   })
   @ApiResponse({
     status: 200,
@@ -169,11 +172,11 @@ export class PullRequestController {
 
   @ApiOperation({
     summary: "Pull Request의 변경사항 diff",
-    description: "PR의 source와 target 브랜치 간 diff를 조회합니다"
+    description: "PR의 source와 target 브랜치 간 diff를 조회합니다",
   })
   @ApiResponse({
     status: 200,
-    description: "PR diff 정보"
+    description: "PR diff 정보",
   })
   @Get(":repoId/pull-requests/:prId/diff")
   @HttpCode(HttpStatus.OK)
@@ -183,13 +186,17 @@ export class PullRequestController {
     @AuthUser() user: User,
     @Query("path") filePath?: string,
   ) {
-    const pr = await this.pullRequestService.getPullRequest(repoId, user.id, prId);
+    const pr = await this.pullRequestService.getPullRequest(
+      repoId,
+      user.id,
+      prId,
+    );
 
     return this.gitDiffService.getBranchDiffFromRemote(
       repoId,
       pr.sourceBranch,
       pr.targetBranch,
-      filePath
+      filePath,
     );
   }
 }

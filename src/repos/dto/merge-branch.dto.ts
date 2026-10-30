@@ -19,7 +19,8 @@ export class MergeBranchDto {
   targetBranch?: string;
 
   @ApiPropertyOptional({
-    description: "Fast-forward 병합만 허용할지 여부 (현재는 3-way merge만 지원)",
+    description:
+      "Fast-forward 병합만 허용할지 여부 (현재는 3-way merge만 지원)",
     example: false,
     default: false,
   })

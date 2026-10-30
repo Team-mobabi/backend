@@ -246,7 +246,7 @@ export class GitDiffService extends BaseRepoService {
    * Git diff 출력을 파싱
    */
   private parseDiffOutput(diffOutput: string): FileDiff[] {
-    if (!diffOutput || diffOutput.trim() === '') {
+    if (!diffOutput || diffOutput.trim() === "") {
       return [];
     }
 
@@ -254,7 +254,7 @@ export class GitDiffService extends BaseRepoService {
     const fileDiffs = diffOutput.split(/^diff --git /m).filter(Boolean);
 
     for (const fileDiff of fileDiffs) {
-      const lines = fileDiff.split('\n');
+      const lines = fileDiff.split("\n");
 
       // 파일 경로 추출 (a/path b/path 형식)
       const pathMatch = lines[0].match(/a\/(.*?) b\/(.*?)$/);
@@ -263,13 +263,13 @@ export class GitDiffService extends BaseRepoService {
       const path = pathMatch[2];
 
       // Binary 파일 체크
-      const isBinary = fileDiff.includes('Binary files');
+      const isBinary = fileDiff.includes("Binary files");
 
       if (isBinary) {
         files.push({
           path,
-          oldContent: '',
-          newContent: '',
+          oldContent: "",
+          newContent: "",
           diff: fileDiff,
           additions: 0,
           deletions: 0,
@@ -281,19 +281,19 @@ export class GitDiffService extends BaseRepoService {
       // 변경사항 카운트
       let additions = 0;
       let deletions = 0;
-      let oldContent = '';
-      let newContent = '';
+      let oldContent = "";
+      let newContent = "";
 
       for (const line of lines) {
-        if (line.startsWith('+') && !line.startsWith('+++')) {
+        if (line.startsWith("+") && !line.startsWith("+++")) {
           additions++;
-          newContent += line.substring(1) + '\n';
-        } else if (line.startsWith('-') && !line.startsWith('---')) {
+          newContent += line.substring(1) + "\n";
+        } else if (line.startsWith("-") && !line.startsWith("---")) {
           deletions++;
-          oldContent += line.substring(1) + '\n';
-        } else if (line.startsWith(' ')) {
+          oldContent += line.substring(1) + "\n";
+        } else if (line.startsWith(" ")) {
           // Context line
-          const content = line.substring(1) + '\n';
+          const content = line.substring(1) + "\n";
           oldContent += content;
           newContent += content;
         }
@@ -317,15 +317,15 @@ export class GitDiffService extends BaseRepoService {
    * --name-status 출력 파싱
    */
   private parseFileStatus(output: string): { path: string; status: string }[] {
-    if (!output || output.trim() === '') {
+    if (!output || output.trim() === "") {
       return [];
     }
 
-    const lines = output.trim().split('\n');
+    const lines = output.trim().split("\n");
     const files: { path: string; status: string }[] = [];
 
     for (const line of lines) {
-      const parts = line.split('\t');
+      const parts = line.split("\t");
       if (parts.length >= 2) {
         const status = this.getStatusName(parts[0]);
         const path = parts[1];
@@ -345,7 +345,7 @@ export class GitDiffService extends BaseRepoService {
     deletions: number;
     fileStats: { path: string; additions: number; deletions: number }[];
   } {
-    if (!output || output.trim() === '') {
+    if (!output || output.trim() === "") {
       return {
         files: 0,
         additions: 0,
@@ -354,16 +354,17 @@ export class GitDiffService extends BaseRepoService {
       };
     }
 
-    const lines = output.trim().split('\n');
-    const fileStats: { path: string; additions: number; deletions: number }[] = [];
+    const lines = output.trim().split("\n");
+    const fileStats: { path: string; additions: number; deletions: number }[] =
+      [];
     let totalAdditions = 0;
     let totalDeletions = 0;
 
     for (const line of lines) {
-      const parts = line.split('\t');
+      const parts = line.split("\t");
       if (parts.length >= 3) {
-        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
-        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
+        const additions = parts[0] === "-" ? 0 : parseInt(parts[0], 10);
+        const deletions = parts[1] === "-" ? 0 : parseInt(parts[1], 10);
         const path = parts[2];
 
         fileStats.push({ path, additions, deletions });
@@ -385,12 +386,12 @@ export class GitDiffService extends BaseRepoService {
    */
   private getStatusName(code: string): string {
     const statusMap: Record<string, string> = {
-      'A': 'added',
-      'M': 'modified',
-      'D': 'deleted',
-      'R': 'renamed',
-      'C': 'copied',
-      'U': 'unmerged',
+      A: "added",
+      M: "modified",
+      D: "deleted",
+      R: "renamed",
+      C: "copied",
+      U: "unmerged",
     };
 
     return statusMap[code] || code;

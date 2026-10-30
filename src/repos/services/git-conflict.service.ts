@@ -40,7 +40,10 @@ export class GitConflictService extends BaseRepoService {
   /**
    * Git 상태를 확인하여 충돌 파일을 찾습니다
    */
-  async checkForConflicts(repoId: string, userId: string): Promise<ConflictInfo> {
+  async checkForConflicts(
+    repoId: string,
+    userId: string,
+  ): Promise<ConflictInfo> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
@@ -50,9 +53,10 @@ export class GitConflictService extends BaseRepoService {
       return {
         hasConflict: conflictFiles.length > 0,
         conflictFiles,
-        message: conflictFiles.length > 0
-          ? `${conflictFiles.length}개 파일에서 충돌이 발생했습니다`
-          : undefined,
+        message:
+          conflictFiles.length > 0
+            ? `${conflictFiles.length}개 파일에서 충돌이 발생했습니다`
+            : undefined,
       };
     } catch (error) {
       throw new Error(`충돌 확인 실패: ${error.message}`);
@@ -62,7 +66,10 @@ export class GitConflictService extends BaseRepoService {
   /**
    * 로컬 변경사항이 있는지 확인합니다
    */
-  async checkUncommittedChanges(repoId: string, userId: string): Promise<string[]> {
+  async checkUncommittedChanges(
+    repoId: string,
+    userId: string,
+  ): Promise<string[]> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     const status = await git.status();
@@ -70,7 +77,7 @@ export class GitConflictService extends BaseRepoService {
       ...status.modified,
       ...status.created,
       ...status.deleted,
-      ...status.renamed.map(r => r.to),
+      ...status.renamed.map((r) => r.to),
     ];
 
     return changes;
@@ -94,7 +101,10 @@ export class GitConflictService extends BaseRepoService {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     // 1. 로컬 변경사항 확인
-    const uncommittedChanges = await this.checkUncommittedChanges(repoId, userId);
+    const uncommittedChanges = await this.checkUncommittedChanges(
+      repoId,
+      userId,
+    );
     if (uncommittedChanges.length > 0) {
       const stashResult = await this.autoStash(repoId, userId);
 
@@ -113,7 +123,7 @@ export class GitConflictService extends BaseRepoService {
           conflictFiles: conflictInfo.conflictFiles,
           message: conflictInfo.hasConflict
             ? "Pull 성공 (로컬 변경사항 자동 저장 및 복원, 충돌 발생)"
-            : "Pull 성공 (로컬 변경사항 자동 저장 및 복원)"
+            : "Pull 성공 (로컬 변경사항 자동 저장 및 복원)",
         };
       } catch (error) {
         if (stashResult) {
@@ -134,7 +144,7 @@ export class GitConflictService extends BaseRepoService {
           success: true,
           hasConflict: true,
           conflictFiles: conflictInfo.conflictFiles,
-          message: "Pull 중 충돌이 발생했습니다"
+          message: "Pull 중 충돌이 발생했습니다",
         };
       }
     }
@@ -148,7 +158,9 @@ export class GitConflictService extends BaseRepoService {
         success: true,
         hasConflict: conflictInfo.hasConflict,
         conflictFiles: conflictInfo.conflictFiles,
-        message: conflictInfo.hasConflict ? "Pull 중 충돌이 발생했습니다" : "Pull 성공"
+        message: conflictInfo.hasConflict
+          ? "Pull 중 충돌이 발생했습니다"
+          : "Pull 성공",
       };
     } catch (error) {
       if (!/merge conflict|CONFLICT/i.test(error.message)) {
@@ -160,7 +172,7 @@ export class GitConflictService extends BaseRepoService {
         success: true,
         hasConflict: true,
         conflictFiles: conflictInfo.conflictFiles,
-        message: "Pull 중 충돌이 발생했습니다"
+        message: "Pull 중 충돌이 발생했습니다",
       };
     }
   }
@@ -188,7 +200,10 @@ export class GitConflictService extends BaseRepoService {
     } catch (error) {
       const errorMessage = error.message || error.toString();
 
-      if (errorMessage.includes("rejected") || errorMessage.includes("non-fast-forward")) {
+      if (
+        errorMessage.includes("rejected") ||
+        errorMessage.includes("non-fast-forward")
+      ) {
         throw new GitPushRejectedException({
           reason: errorMessage.includes("non-fast-forward")
             ? "non-fast-forward"
@@ -239,7 +254,7 @@ export class GitConflictService extends BaseRepoService {
         conflictFiles: conflictInfo.conflictFiles,
         message: conflictInfo.hasConflict
           ? `${sourceBranch}를 병합했으나 충돌이 발생했습니다`
-          : `${sourceBranch}를 성공적으로 병합했습니다`
+          : `${sourceBranch}를 성공적으로 병합했습니다`,
       };
     } catch (error) {
       if (!/merge conflict|CONFLICT/i.test(error.message)) {
@@ -254,7 +269,7 @@ export class GitConflictService extends BaseRepoService {
         success: true,
         hasConflict: true,
         conflictFiles: conflictInfo.conflictFiles,
-        message: `${sourceBranch} 병합 중 충돌이 발생했습니다`
+        message: `${sourceBranch} 병합 중 충돌이 발생했습니다`,
       };
     }
   }
@@ -262,7 +277,10 @@ export class GitConflictService extends BaseRepoService {
   /**
    * 변경사항을 자동으로 Stash합니다
    */
-  private async autoStash(repoId: string, userId: string): Promise<StashInfo | null> {
+  private async autoStash(
+    repoId: string,
+    userId: string,
+  ): Promise<StashInfo | null> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     const timestamp = new Date().toISOString();
@@ -290,7 +308,11 @@ export class GitConflictService extends BaseRepoService {
   /**
    * Stash를 적용합니다
    */
-  private async applyStash(repoId: string, userId: string, stashId: string): Promise<void> {
+  private async applyStash(
+    repoId: string,
+    userId: string,
+    stashId: string,
+  ): Promise<void> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
@@ -344,12 +366,12 @@ export class GitConflictService extends BaseRepoService {
       if (!conflictInfo.hasConflict) {
         return {
           success: true,
-          message: "모든 충돌이 해결되었습니다. 이제 커밋할 수 있습니다."
+          message: "모든 충돌이 해결되었습니다. 이제 커밋할 수 있습니다.",
         };
       } else {
         return {
           success: true,
-          message: `파일 충돌이 해결되었습니다. 남은 충돌 파일: ${conflictInfo.conflictFiles.join(", ")}`
+          message: `파일 충돌이 해결되었습니다. 남은 충돌 파일: ${conflictInfo.conflictFiles.join(", ")}`,
         };
       }
     } catch (error) {
@@ -360,7 +382,10 @@ export class GitConflictService extends BaseRepoService {
   /**
    * 병합을 중단합니다
    */
-  async abortMerge(repoId: string, userId: string): Promise<{ success: boolean; message: string }> {
+  async abortMerge(
+    repoId: string,
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {
@@ -374,7 +399,10 @@ export class GitConflictService extends BaseRepoService {
   /**
    * Rebase를 중단합니다
    */
-  async abortRebase(repoId: string, userId: string): Promise<{ success: boolean; message: string }> {
+  async abortRebase(
+    repoId: string,
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
     const { git } = await this.getRepoAndGit(repoId, userId);
 
     try {

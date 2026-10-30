@@ -3,7 +3,7 @@ export interface FileItem {
   path: string;
   size: number;
   modifiedAt: Date;
-  type: 'file';
+  type: "file";
 }
 
 export interface FolderItem {
@@ -11,22 +11,22 @@ export interface FolderItem {
   path: string;
   size: number;
   modifiedAt: Date;
-  type: 'folder';
+  type: "folder";
 }
 
-export interface FileSystemItem extends Omit<FileItem | FolderItem, 'type'> {
-  type: 'file' | 'folder';
+export interface FileSystemItem extends Omit<FileItem | FolderItem, "type"> {
+  type: "file" | "folder";
 }
 
 export interface DirectoryContent {
-  type: 'directory';
+  type: "directory";
   folders: FolderItem[];
   files: FileItem[];
   currentPath: string;
 }
 
 export interface FileContent {
-  type: 'file';
+  type: "file";
   content: string;
   size: number;
   path: string;
@@ -34,7 +34,7 @@ export interface FileContent {
 }
 
 export interface BinaryFileInfo {
-  type: 'binary';
+  type: "binary";
   size: number;
   path: string;
   modifiedAt: Date;
@@ -69,7 +69,7 @@ export interface FileOperationResult {
 export interface FileDeleteResult {
   success: true;
   deletedPath: string;
-  type: 'file' | 'folder';
+  type: "file" | "folder";
 }
 
 export type FileBrowseResult = DirectoryContent | FileContent | BinaryFileInfo;

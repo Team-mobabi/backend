@@ -18,7 +18,10 @@ import {
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
 import { CollaboratorService } from "@src/repos/services/collaborator.service";
-import { AddCollaboratorDto, UpdateCollaboratorDto } from "@src/repos/dto/collaborator.dto";
+import {
+  AddCollaboratorDto,
+  UpdateCollaboratorDto,
+} from "@src/repos/dto/collaborator.dto";
 import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
 import { User } from "@src/users/entities/user.entity";
 import { AuthUser } from "@src/repos/auth-user.decorator";
@@ -28,9 +31,7 @@ import { AuthUser } from "@src/repos/auth-user.decorator";
 @Controller("repos")
 @UseGuards(JwtAuthGuard)
 export class CollaboratorController {
-  constructor(
-    private readonly collaboratorService: CollaboratorService,
-  ) {}
+  constructor(private readonly collaboratorService: CollaboratorService) {}
 
   @ApiOperation({ summary: "협업자 추가" })
   @ApiResponse({

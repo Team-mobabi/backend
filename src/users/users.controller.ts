@@ -1,5 +1,20 @@
-import { Controller, Get, Patch, Delete, UseGuards, Request, Query, Body } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
+import {
+  Controller,
+  Get,
+  Patch,
+  Delete,
+  UseGuards,
+  Request,
+  Query,
+  Body,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+} from "@nestjs/swagger";
 import { Request as ExpressRequest } from "express";
 import { UsersService } from "@src/users/users.service";
 import { AuthGuard } from "@nestjs/passport";
@@ -25,7 +40,11 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: "사용자 검색" })
-  @ApiQuery({ name: "q", description: "검색 쿼리 (이메일)", example: "user@example.com" })
+  @ApiQuery({
+    name: "q",
+    description: "검색 쿼리 (이메일)",
+    example: "user@example.com",
+  })
   @ApiResponse({ status: 200, description: "검색 결과 반환", type: [User] })
   @ApiResponse({ status: 401, description: "인증 실패" })
   @UseGuards(AuthGuard("jwt"))
@@ -36,7 +55,7 @@ export class UsersController {
 
   @ApiOperation({
     summary: "비밀번호 변경",
-    description: "현재 비밀번호를 확인한 후 새 비밀번호로 변경합니다."
+    description: "현재 비밀번호를 확인한 후 새 비밀번호로 변경합니다.",
   })
   @ApiResponse({
     status: 200,
@@ -44,17 +63,23 @@ export class UsersController {
     schema: {
       type: "object",
       properties: {
-        message: { type: "string", example: "비밀번호가 성공적으로 변경되었습니다." }
-      }
-    }
+        message: {
+          type: "string",
+          example: "비밀번호가 성공적으로 변경되었습니다.",
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 401, description: "인증 실패 또는 현재 비밀번호 불일치" })
+  @ApiResponse({
+    status: 401,
+    description: "인증 실패 또는 현재 비밀번호 불일치",
+  })
   @ApiResponse({ status: 404, description: "사용자를 찾을 수 없음" })
   @UseGuards(AuthGuard("jwt"))
   @Patch("/password")
   changePassword(
     @Request() req: ExpressRequest,
-    @Body() changePasswordDto: ChangePasswordDto
+    @Body() changePasswordDto: ChangePasswordDto,
   ): Promise<{ message: string }> {
     const user = req.user as User;
     const userId = user.id;
@@ -62,13 +87,13 @@ export class UsersController {
     return this.usersService.updatePassword(
       userId,
       changePasswordDto.currentPassword,
-      changePasswordDto.newPassword
+      changePasswordDto.newPassword,
     );
   }
 
   @ApiOperation({
     summary: "회원 탈퇴",
-    description: "현재 사용자의 계정을 영구적으로 삭제합니다."
+    description: "현재 사용자의 계정을 영구적으로 삭제합니다.",
   })
   @ApiResponse({
     status: 200,
@@ -76,9 +101,9 @@ export class UsersController {
     schema: {
       type: "object",
       properties: {
-        message: { type: "string", example: "회원 탈퇴가 완료되었습니다." }
-      }
-    }
+        message: { type: "string", example: "회원 탈퇴가 완료되었습니다." },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: "인증 실패" })
   @ApiResponse({ status: 404, description: "사용자를 찾을 수 없음" })
