@@ -80,7 +80,7 @@ describe("git 서비스 (실제 git 저장소)", () => {
     );
     ops = new GitOperationService(workspaces);
     remote = new GitRemoteService(workspaces, storage);
-    branches = new BranchService(workspaces);
+    branches = new BranchService(workspaces, storage);
     diff = new GitDiffService(workspaces, storage);
 
     await run(storage.initialize(REPO, alice.id));

@@ -15,6 +15,12 @@ const tagOf = (exit: Exit.Exit<unknown, { _tag: string }>) =>
     ? exit.cause.error._tag
     : undefined;
 
+const user = (id: string) => ({
+  id,
+  email: `${id}@x.com`,
+  createdAt: new Date(),
+});
+
 const makePr = (overrides: Partial<PullRequest> = {}): PullRequest => ({
   id: "pr1",
   title: "feat",
@@ -75,7 +81,7 @@ describe("PullRequestService 권한/상태", () => {
     service = new PullRequestService(
       workspaces as unknown as RepoWorkspaceService,
       repo as unknown as PullRequestRepository,
-      { merge } as unknown as BranchService,
+      { mergeOnRemote: merge } as unknown as BranchService,
       {} as GitDiffService,
     );
   });
@@ -85,19 +91,21 @@ describe("PullRequestService 권한/상태", () => {
 
   it("read 권한으로는 병합할 수 없다", async () => {
     approvals = 1;
-    expect(tagOf(await run(service.merge("r1", "reader", "pr1", false)))).toBe(
-      "RepoAccessDeniedError",
-    );
+    expect(
+      tagOf(await run(service.merge("r1", user("reader"), "pr1", false))),
+    ).toBe("RepoAccessDeniedError");
     expect(merge).not.toHaveBeenCalled();
   });
 
   it("승인이 필요한 PR은 승인 없이 병합할 수 없다", async () => {
     expect(
-      tagOf(await run(service.merge("r1", "maintainer", "pr1", false))),
+      tagOf(await run(service.merge("r1", user("maintainer"), "pr1", false))),
     ).toBe("PullRequestConflictError");
 
     approvals = 1;
-    const merged = await run(service.merge("r1", "maintainer", "pr1", false));
+    const merged = await run(
+      service.merge("r1", user("maintainer"), "pr1", false),
+    );
     expect(Exit.isSuccess(merged)).toBe(true);
     expect(repo.markMerged).toHaveBeenCalledWith(pr, "maintainer", "abc");
   });
@@ -115,7 +123,7 @@ describe("PullRequestService 권한/상태", () => {
     pr = makePr({ status: "closed" });
     approvals = 1;
     expect(
-      tagOf(await run(service.merge("r1", "maintainer", "pr1", false))),
+      tagOf(await run(service.merge("r1", user("maintainer"), "pr1", false))),
     ).toBe("PullRequestConflictError");
     expect(
       tagOf(

@@ -139,7 +139,7 @@ export class PullRequestController extends BaseController {
     return this.runEffect(
       this.pullRequestService.merge(
         this.repoId(repoId),
-        user.id,
+        user,
         this.prId(prId),
         fastForwardOnly,
       ),
