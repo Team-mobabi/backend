@@ -429,50 +429,38 @@ Once the application is running, access the interactive API documentation:
 
 ## 📁 Project Structure
 
+계층형 구조이며, 의존 방향은 `presentation → application → infrastructure / domain` 입니다.
+
 ```
-git-project/
-├── src/
-│   ├── app.module.ts          # Root application module
-│   ├── main.ts                # Application entry point
-│   ├── auth/                  # Authentication module
-│   │   ├── auth.controller.ts
-│   │   ├── auth.service.ts
-│   │   └── auth.module.ts
-│   ├── users/                 # Users module
-│   │   ├── users.controller.ts
-│   │   ├── users.service.ts
-│   │   └── users.module.ts
-│   ├── repos/                 # Repositories module
-│   │   ├── repos.controller.ts
-│   │   ├── repos.service.ts
-│   │   └── repos.module.ts
-│   ├── email/                 # Email service module
-│   │   ├── email.service.ts
-│   │   └── email.module.ts
-│   └── common/                # Shared utilities
-├── test/                      # Test files
-├── dist/                      # Compiled output
-└── package.json
+src/
+├── domain/            # Effect Schema 도메인 모델, 요청/응답 스키마, 순수 함수 (경로·ref 검증, diff 파서, 커밋 그래프)
+├── application/       # 유스케이스 서비스 (Effect 반환). 권한 확인은 RepoWorkspaceService
+├── infrastructure/    # TypeORM 엔티티/리포지토리, git·파일시스템·메일·Claude 클라이언트
+├── presentation/      # 컨트롤러와 Nest 모듈. BaseController.runEffect/decode, Swagger(apiSchema)
+├── common/            # 태그드 에러(Data.TaggedError), Effect 헬퍼
+├── app.config.ts      # 환경변수 스키마
+└── main.ts
 ```
+
+- 요청 검증: 컨트롤러에서 `this.decode(Schema, body)` — 실패 시 필드별 메시지와 함께 400
+- 에러 → HTTP 상태: `presentation/base.controller.ts`의 `STATUS_BY_TAG`
+- Swagger 스키마는 도메인 스키마에서 `apiSchema()`로 생성
 
 ---
 
 ## 🛠 Development Tools
 
-### Code Formatting
 ```bash
-bun run format
-```
-
-### Linting
-```bash
-bun run lint
-```
-
-### Build
-```bash
+bun run lint        # Biome (lint + format 검사)
+bun run lint:fix    # Biome 자동 수정
+bun run tsc         # 타입 체크
+bun run test        # Vitest (실제 git을 쓰는 통합 테스트 포함)
+bun run check:di    # DB 없이 전체 Nest DI 그래프 조립 확인
 bun run build
+bun run eval:ai     # AI 충돌 해결 평가 (CLAUDE_API_KEY 필요, CLAUDE_MODEL로 모델 고정 가능)
 ```
+
+> Vitest는 decorator metadata를 내보내지 않으므로, DI 관련 변경(특히 주입받는 클래스의 `import type`) 후에는 `check:di`를 실행하세요.
 
 ---
 

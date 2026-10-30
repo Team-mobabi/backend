@@ -1,22 +1,21 @@
 import { DataSource } from "typeorm";
-import { config } from "dotenv";
-import { Repo } from "@src/infrastructure/database/entities/repo.entity";
-import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
-import { PrReview } from "@src/infrastructure/database/entities/pr-review.entity";
-import { User } from "@src/infrastructure/database/entities/user.entity";
-import { EmailVerification } from "@src/infrastructure/database/entities/email-verification.entity";
+import { ENTITIES } from "@src/infrastructure/database/entities";
 
-// .env 파일 로드
-config();
+// TypeORM CLI용. Bun은 .env를 자동으로 읽고, Node는 내장 loadEnvFile을 쓴다
+try {
+  process.loadEnvFile?.();
+} catch {
+  // .env가 없으면 환경변수만 사용
+}
 
 export const AppDataSource = new DataSource({
   type: "postgres",
   host: process.env.DB_HOST,
-  port: Number.parseInt(process.env.DB_PORT || "15432"),
+  port: Number.parseInt(process.env.DB_PORT || "15432", 10),
   username: process.env.DB_USERNAME,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_DATABASE,
-  entities: [Repo, PullRequest, PrReview, User, EmailVerification],
+  entities: ENTITIES,
   migrations: ["src/migrations/*.ts"],
-  synchronize: false, // 마이그레이션 사용 시 false
+  synchronize: false,
 });

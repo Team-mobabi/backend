@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { Injectable, Logger } from "@nestjs/common";
-import type { ConfigService } from "@nestjs/config";
+import { ConfigService } from "@nestjs/config";
 import { Effect } from "effect";
 import {
   type AiError,
