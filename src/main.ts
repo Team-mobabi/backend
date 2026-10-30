@@ -56,14 +56,14 @@ async function bootstrap() {
   }
 
   // 모든 엔드포인트에서 "Repos" 태그 제거
-  Object.keys(document.paths).forEach((path: string) => {
-    Object.keys(document.paths[path]).forEach((method: string) => {
-      const operation = document.paths[path][method];
-      if (operation.tags) {
-        operation.tags = operation.tags.filter((tag: string) => tag !== 'Repos');
+  for (const pathItem of Object.values(document.paths)) {
+    for (const operation of Object.values(pathItem)) {
+      if (operation && typeof operation === "object" && "tags" in operation) {
+        const op = operation as { tags?: string[] };
+        op.tags = op.tags?.filter((tag) => tag !== "Repos");
       }
-    });
-  });
+    }
+  }
 
   SwaggerModule.setup("api", app, document);
 

@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ConfigService } from '@nestjs/config';
 import {
   AIConflictResolverService,
@@ -12,26 +12,16 @@ describe('AIConflictResolverService', () => {
   let service: AIConflictResolverService;
   let configService: ConfigService;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        AIConflictResolverService,
-        {
-          provide: ConfigService,
-          useValue: {
-            get: jest.fn((key: string) => {
-              if (key === 'CLAUDE_API_KEY') {
-                return process.env.CLAUDE_API_KEY || 'test-api-key';
-              }
-              return undefined;
-            }),
-          },
-        },
-      ],
-    }).compile();
-
-    service = module.get<AIConflictResolverService>(AIConflictResolverService);
-    configService = module.get<ConfigService>(ConfigService);
+  beforeEach(() => {
+    configService = {
+      get: vi.fn((key: string) => {
+        if (key === 'CLAUDE_API_KEY') {
+          return process.env.CLAUDE_API_KEY || 'test-api-key';
+        }
+        return undefined;
+      }),
+    } as unknown as ConfigService;
+    service = new AIConflictResolverService(configService);
   });
 
   describe('기본 기능 테스트', () => {
@@ -170,7 +160,7 @@ CONFIDENCE: 50`;
   describe('코드 보존 검증 테스트', () => {
     it('핵심 식별자가 보존되었는지 확인해야 함', () => {
       const serviceAny = service as any;
-      const logSpy = jest.spyOn(serviceAny.logger, 'warn');
+      const logSpy = vi.spyOn(serviceAny.logger, 'warn');
 
       const originalConflict = `<<<<<<< HEAD
 const myVariable = 1;
@@ -206,7 +196,6 @@ function myFunction() {}`;
     ).slice(0, 2);
 
     (shouldRunE2E ? describe : describe.skip)('실제 충돌 해결', () => {
-      jest.setTimeout(60000); // 60초 타임아웃
 
       simpleTestCases.forEach(testCase => {
         it(`${testCase.id}: ${testCase.description}`, async () => {
@@ -239,7 +228,7 @@ function myFunction() {}`;
           console.log(`  ✅ ${testCase.id} 통과`);
           console.log(`     신뢰도: ${(result.confidence * 100).toFixed(1)}%`);
           console.log(`     레벨: ${result.confidenceLevel}`);
-        });
+        }, 60_000);
       });
     });
   });
