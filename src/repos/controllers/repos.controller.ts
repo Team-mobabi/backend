@@ -15,14 +15,14 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
-import { Public } from "@src/repos/public.decorator";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
+import { Public } from "@src/presentation/auth/public.decorator";
 import { ReposService } from "@src/repos/repos.service";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import { RepoResponseDto } from "@src/repos/dto/repo-response.dto";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Repositories")
 @ApiBearerAuth("JWT-auth")

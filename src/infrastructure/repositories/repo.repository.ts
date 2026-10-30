@@ -4,7 +4,7 @@ import { Effect, Option } from "effect";
 import { Repository } from "typeorm";
 import type { DbError } from "@src/common/error";
 import { type Repo, RepoSchema } from "@src/domain/repo/repo";
-import { Repo as RepoEntity } from "@src/repos/entities/repo.entity";
+import { Repo as RepoEntity } from "@src/infrastructure/database/entities/repo.entity";
 import { BaseRepository } from "./base.repository";
 
 @Injectable()

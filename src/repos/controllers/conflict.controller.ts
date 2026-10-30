@@ -18,14 +18,14 @@ import {
   ApiBody,
 } from "@nestjs/swagger";
 import { Either, Schema } from "effect";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { GitConflictService } from "@src/repos/services/git-conflict.service";
 import { AIConflictResolverService } from "@src/repos/services/ai-conflict-resolver.service";
 import { FileService } from "@src/application/file/file.service";
 import { RepoPathSchema } from "@src/domain/file/repo-path";
 import { runAppEffect } from "@src/presentation/base.controller";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Conflicts")
 @ApiBearerAuth("JWT-auth")

@@ -6,11 +6,11 @@ import {
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { ConfigService } from "@nestjs/config";
-import { Repo } from "@src/repos/entities/repo.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
 import {
   RepoCollaborator,
   CollaboratorRole,
-} from "@src/repos/entities/repo-collaborator.entity";
+} from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import {
   AddCollaboratorDto,

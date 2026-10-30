@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Effect, Option } from "effect";
 import simpleGit, { type SimpleGit } from "simple-git";
+import { getOrFail } from "@src/common/effect";
 import {
   type DbError,
   type FileError,
@@ -82,17 +83,12 @@ export class RepoWorkspaceService {
     });
 
     return this.repoRepository.findById(repoId).pipe(
-      Effect.flatMap(
-        Option.match({
-          onNone: () =>
-            Effect.fail(
-              new RepoNotFoundError({
-                message: `레포지토리 '${repoId}'을(를) 찾을 수 없습니다`,
-                repoId,
-              }),
-            ),
-          onSome: Effect.succeed,
-        }),
+      getOrFail(
+        () =>
+          new RepoNotFoundError({
+            message: `레포지토리 '${repoId}'을(를) 찾을 수 없습니다`,
+            repoId,
+          }),
       ),
       Effect.tap((repo) => {
         if (repo.ownerId === userId) return Effect.void;

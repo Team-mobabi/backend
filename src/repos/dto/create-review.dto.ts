@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsEnum } from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { ReviewStatus } from "../entities/pr-review.entity";
+import { ReviewStatus } from "@src/infrastructure/database/entities/pr-review.entity";
 
 export class CreateReviewDto {
   @ApiProperty({

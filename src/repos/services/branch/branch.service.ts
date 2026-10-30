@@ -12,8 +12,8 @@ import simpleGit, {
   DefaultLogFields,
   SimpleGit,
 } from "simple-git";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { ConfigService } from "@nestjs/config";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { MergeResponse } from "@src/repos/dto/responses.dto";

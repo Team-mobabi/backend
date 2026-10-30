@@ -7,7 +7,7 @@ import {
   type CollaboratorRole,
   CollaboratorRoleSchema,
 } from "@src/domain/repo/collaborator-role";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { BaseRepository } from "./base.repository";
 
 @Injectable()

@@ -23,6 +23,14 @@ const STATUS_BY_TAG: Record<Exclude<AppError["_tag"], "ApiError">, number> = {
   DbValidationError: HttpStatus.INTERNAL_SERVER_ERROR,
   AiUnavailableError: HttpStatus.SERVICE_UNAVAILABLE,
   AiResponseError: HttpStatus.BAD_GATEWAY,
+  InvalidCredentialsError: HttpStatus.UNAUTHORIZED,
+  InvalidRefreshTokenError: HttpStatus.UNAUTHORIZED,
+  EmailAlreadyInUseError: HttpStatus.CONFLICT,
+  EmailNotVerifiedError: HttpStatus.BAD_REQUEST,
+  UserNotFoundError: HttpStatus.NOT_FOUND,
+  VerificationCodeError: HttpStatus.BAD_REQUEST,
+  // 기존 API와 동일하게 400 유지 (프론트 호환)
+  EmailDeliveryError: HttpStatus.BAD_REQUEST,
 };
 
 export const statusOf = (error: AppError): number =>
@@ -43,8 +51,9 @@ export const runAppEffect = <A>(
 const toHttpException = (error: AppError, logger: Logger): HttpException => {
   const status = statusOf(error);
 
-  if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
-    const cause = "originalError" in error ? error.originalError : undefined;
+  const cause = "originalError" in error ? error.originalError : undefined;
+  // 4xx라도 하위 원인(SMTP 실패 등)이 있으면 추적할 수 있도록 error로 남긴다
+  if (status >= HttpStatus.INTERNAL_SERVER_ERROR || cause !== undefined) {
     logger.error(`[${error._tag}] ${error.message}`, cause);
   } else {
     logger.warn(`[${error._tag}] ${error.message}`);

@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import type { FileService } from "@src/application/file/file.service";
 import { FileNotFoundError } from "@src/common/error";
-import type { User } from "@src/users/entities/user.entity";
+import type { User } from "@src/infrastructure/database/entities/user.entity";
 import { FileController } from "./file.controller";
 
 const REPO_ID = "11111111-1111-4111-8111-111111111111";

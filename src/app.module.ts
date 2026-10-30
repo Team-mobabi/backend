@@ -4,18 +4,18 @@ import { Module } from "@nestjs/common";
 
 import { appConfigValidate } from "@src/app.config";
 
-import { UsersModule } from "@src/users/users.module";
+import { UserModule } from "@src/presentation/user/user.module";
 import { ReposModule } from "@src/repos/repos.module";
-import { AuthModule } from "@src/auth/auth.module";
-import { EmailModule } from "@src/email/email.module";
+import { AuthModule } from "@src/presentation/auth/auth.module";
+import { EmailModule } from "@src/presentation/email/email.module";
 import { FileModule } from "@src/presentation/file/file.module";
 
-import { Repo } from "@src/repos/entities/repo.entity";
-import { PullRequest } from "@src/repos/entities/pull-request.entity";
-import { PrReview } from "@src/repos/entities/pr-review.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
-import { User } from "@src/users/entities/user.entity";
-import { EmailVerification } from "@src/email/entities/email-verification.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
+import { PrReview } from "@src/infrastructure/database/entities/pr-review.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
+import { User } from "@src/infrastructure/database/entities/user.entity";
+import { EmailVerification } from "@src/infrastructure/database/entities/email-verification.entity";
 
 @Module({
   imports: [
@@ -45,7 +45,7 @@ import { EmailVerification } from "@src/email/entities/email-verification.entity
       inject: [ConfigService],
     }),
     AuthModule,
-    UsersModule,
+    UserModule,
     ReposModule,
     EmailModule,
     FileModule,

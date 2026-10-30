@@ -1,10 +1,10 @@
 import { DataSource } from "typeorm";
 import { config } from "dotenv";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { PullRequest } from "@src/repos/entities/pull-request.entity";
-import { PrReview } from "@src/repos/entities/pr-review.entity";
-import { User } from "@src/users/entities/user.entity";
-import { EmailVerification } from "@src/email/entities/email-verification.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
+import { PrReview } from "@src/infrastructure/database/entities/pr-review.entity";
+import { User } from "@src/infrastructure/database/entities/user.entity";
+import { EmailVerification } from "@src/infrastructure/database/entities/email-verification.entity";
 
 // .env 파일 로드
 config();

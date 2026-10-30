@@ -5,11 +5,11 @@ import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import simpleGit, { SimpleGit } from "simple-git";
-import { Repo } from "@src/repos/entities/repo.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
 import {
   RepoCollaborator,
   CollaboratorRole,
-} from "@src/repos/entities/repo-collaborator.entity";
+} from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import {
   RepoNotFoundException,
   RepoAccessDeniedException,

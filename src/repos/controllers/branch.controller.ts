@@ -16,14 +16,14 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { BranchService } from "@src/repos/services/branch/branch.service";
 import { MergeResponse } from "@src/repos/dto/responses.dto";
 import { CreateBranchDto } from "@src/repos/dto/create-branch.dto";
 import { SwitchBranchDto } from "@src/repos/dto/switch-branch.dto";
 import { MergeBranchDto } from "@src/repos/dto/merge-branch.dto";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Branches")
 @ApiBearerAuth("JWT-auth")

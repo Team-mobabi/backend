@@ -5,8 +5,8 @@ import { ConfigService } from "@nestjs/config";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import simpleGit from "simple-git";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { PullResponse } from "@src/repos/dto/responses.dto";
 import {

@@ -8,10 +8,13 @@ import { Repository } from "typeorm";
 import {
   PullRequest,
   PullRequestStatus,
-} from "@src/repos/entities/pull-request.entity";
-import { PrReview, ReviewStatus } from "@src/repos/entities/pr-review.entity";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+} from "@src/infrastructure/database/entities/pull-request.entity";
+import {
+  PrReview,
+  ReviewStatus,
+} from "@src/infrastructure/database/entities/pr-review.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
 import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
 import { ConfigService } from "@nestjs/config";

@@ -15,18 +15,18 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import {
   AIAssistantService,
   GitContext,
 } from "@src/repos/services/ai-assistant.service";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 import { BaseRepoService } from "@src/repos/services/base-repo.service";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { ConfigService } from "@nestjs/config";
 import {
   AskQuestionDto,

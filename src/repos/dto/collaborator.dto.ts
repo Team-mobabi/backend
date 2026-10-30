@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsNotEmpty, IsString } from "class-validator";
-import { CollaboratorRole } from "@src/repos/entities/repo-collaborator.entity";
+import { CollaboratorRole } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 
 export class AddCollaboratorDto {
   @ApiProperty({

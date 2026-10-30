@@ -16,15 +16,15 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { CollaboratorService } from "@src/repos/services/collaborator.service";
 import {
   AddCollaboratorDto,
   UpdateCollaboratorDto,
 } from "@src/repos/dto/collaborator.dto";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Collaborators")
 @ApiBearerAuth("JWT-auth")

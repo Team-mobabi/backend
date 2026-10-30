@@ -5,10 +5,10 @@ import {
   ForbiddenException,
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repo } from "@src/repos/entities/repo.entity";
-import { PullRequest } from "@src/repos/entities/pull-request.entity";
-import { PrReview } from "@src/repos/entities/pr-review.entity";
-import { RepoCollaborator } from "@src/repos/entities/repo-collaborator.entity";
+import { Repo } from "@src/infrastructure/database/entities/repo.entity";
+import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
+import { PrReview } from "@src/infrastructure/database/entities/pr-review.entity";
+import { RepoCollaborator } from "@src/infrastructure/database/entities/repo-collaborator.entity";
 import { CreateRepoDto } from "@src/repos/dto/create-repo.dto";
 import { ForkRepoDto } from "@src/repos/dto/fork-repo.dto";
 import {

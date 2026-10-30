@@ -15,7 +15,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { PullRequestService } from "@src/repos/services/pull-request.service";
 import { GitDiffService } from "@src/repos/services/git-diff.service";
 import { CreatePullRequestDto } from "@src/repos/dto/create-pull-request.dto";
@@ -24,10 +24,10 @@ import { CreateReviewDto } from "@src/repos/dto/create-review.dto";
 import {
   PullRequestStatus,
   PullRequest,
-} from "@src/repos/entities/pull-request.entity";
-import { PrReview } from "@src/repos/entities/pr-review.entity";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+} from "@src/infrastructure/database/entities/pull-request.entity";
+import { PrReview } from "@src/infrastructure/database/entities/pr-review.entity";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Pull Requests")
 @ApiBearerAuth("JWT-auth")

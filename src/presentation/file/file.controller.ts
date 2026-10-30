@@ -28,7 +28,7 @@ import {
 } from "@nestjs/swagger";
 import { create as createArchive } from "archiver";
 import type { Response } from "express";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { FileService } from "@src/application/file/file.service";
 import {
   BrowseFilesQuerySchema,
@@ -44,8 +44,8 @@ import {
 import { RepoIdSchema } from "@src/domain/repo/repo";
 import { BaseController } from "@src/presentation/base.controller";
 import { apiSchema } from "@src/presentation/openapi";
-import { AuthUser } from "@src/repos/auth-user.decorator";
-import { User } from "@src/users/entities/user.entity";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
 import {
   CREATE_OR_UPLOAD_DESCRIPTION,
   DOWNLOAD_FILE_DESCRIPTION,

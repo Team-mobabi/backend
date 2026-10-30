@@ -14,7 +14,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from "@nestjs/swagger";
-import { JwtAuthGuard } from "@src/auth/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "@src/infrastructure/auth/jwt-auth.guard";
 import { GitRemoteService } from "@src/repos/services/git-remote/git-remote.service";
 import { GitOperationService } from "@src/repos/services/git-operation.service";
 import { AddRemoteDto } from "@src/repos/dto/add-remote.dto";
@@ -25,8 +25,8 @@ import { CreateLocalRemoteDto } from "@src/repos/dto/create-local-remote.dto";
 import { AddDto } from "@src/repos/dto/add.dto";
 import { CommitDto } from "@src/repos/dto/commit.dto";
 import { ResetDto } from "@src/repos/dto/reset.dto";
-import { User } from "@src/users/entities/user.entity";
-import { AuthUser } from "@src/repos/auth-user.decorator";
+import type { User } from "@src/domain/user/user";
+import { AuthUser } from "@src/presentation/auth/auth-user.decorator";
 
 @ApiTags("Git Operations")
 @ApiBearerAuth("JWT-auth")
