@@ -153,4 +153,20 @@ describe("BaseController.decode", () => {
       expect(response.message).toEqual(["path: 밖으로 나갈 수 없습니다"]);
     }
   });
+
+  it("리터럴 union 오류는 후보를 합쳐 한 줄로 보여준다", () => {
+    const controller = new TestController();
+    const Body = Schema.Struct({ role: Schema.Literal("read", "write") });
+    try {
+      controller.parse(Body, { role: "owner" });
+      expect.unreachable();
+    } catch (error) {
+      const response = (error as BadRequestException).getResponse() as {
+        message: string[];
+      };
+      expect(response.message).toEqual([
+        'role: Expected "read" | "write", actual "owner"',
+      ]);
+    }
+  });
 });

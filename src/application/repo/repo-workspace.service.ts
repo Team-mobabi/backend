@@ -1,6 +1,4 @@
-import * as path from "node:path";
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { Effect, Option } from "effect";
 import simpleGit, { type SimpleGit } from "simple-git";
 import { getOrFail } from "@src/common/effect";
@@ -12,11 +10,13 @@ import {
   type RepoError,
   RepoNotFoundError,
 } from "@src/common/error";
-import type { CollaboratorRole } from "@src/domain/repo/collaborator-role";
-import { roleSatisfies } from "@src/domain/repo/collaborator-role";
+import {
+  type CollaboratorRole,
+  roleSatisfies,
+} from "@src/domain/repo/collaborator-role";
 import type { Repo } from "@src/domain/repo/repo";
-import { ensureDir, statOption } from "@src/infrastructure/file/file-system";
-import { tryGit } from "@src/infrastructure/git/git";
+import { statOption } from "@src/infrastructure/file/file-system";
+import { RepoStorageService } from "@src/infrastructure/git/repo-storage.service";
 import { CollaboratorRepository } from "@src/infrastructure/repositories/collaborator.repository";
 import { RepoRepository } from "@src/infrastructure/repositories/repo.repository";
 
@@ -31,28 +31,11 @@ export type WorkspaceError = RepoError | DbError | GitError | FileError;
 
 @Injectable()
 export class RepoWorkspaceService {
-  private readonly repoBasePath: string;
-  private readonly remoteBasePath: string;
-
   constructor(
     private readonly repoRepository: RepoRepository,
     private readonly collaboratorRepository: CollaboratorRepository,
-    configService: ConfigService,
-  ) {
-    const isProd = configService.get<string>("ENV", "dev") === "prod";
-    this.repoBasePath = path.resolve(
-      configService.get<string>(
-        isProd ? "REPO_BASE_PATH" : "REPO_LOCAL_BASE_PATH",
-        "data/repos",
-      ),
-    );
-    this.remoteBasePath = path.resolve(
-      configService.get<string>(
-        isProd ? "REMOTE_BASE_PATH" : "REMOTE_LOCAL_BASE_PATH",
-        "data/remote",
-      ),
-    );
-  }
+    private readonly storage: RepoStorageService,
+  ) {}
 
   /**
    * 권한을 확인하고 사용자별 작업 사본을 반환한다.
@@ -72,10 +55,11 @@ export class RepoWorkspaceService {
     );
   }
 
-  private authorize(
+  /** 작업 사본 없이 권한만 확인 (DB만 다루는 작업용) */
+  authorize(
     repoId: string,
     userId: string,
-    requiredRole: CollaboratorRole,
+    requiredRole: CollaboratorRole = "read",
   ): Effect.Effect<Repo, RepoError | DbError> {
     const denied = new RepoAccessDeniedError({
       message: `레포지토리 '${repoId}'에 접근 권한이 없습니다`,
@@ -111,25 +95,12 @@ export class RepoWorkspaceService {
     repoId: string,
     userId: string,
   ): Effect.Effect<string, GitError | FileError> {
-    const root = path.join(this.repoBasePath, userId, repoId);
-    const remote = path.join(this.remoteBasePath, `${repoId}.git`);
-
+    const root = this.storage.workingCopyPath(userId, repoId);
     return statOption(root, repoId).pipe(
       Effect.flatMap(
         Option.match({
           onSome: () => Effect.succeed(root),
-          onNone: () =>
-            ensureDir(path.dirname(root), repoId).pipe(
-              Effect.zipRight(
-                tryGit("clone", () => simpleGit().clone(remote, root)),
-              ),
-              Effect.zipRight(
-                tryGit("config", () =>
-                  simpleGit(root).addConfig("commit.gpgsign", "false"),
-                ),
-              ),
-              Effect.as(root),
-            ),
+          onNone: () => this.storage.cloneWorkingCopy(repoId, userId),
         }),
       ),
     );

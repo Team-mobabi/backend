@@ -9,6 +9,7 @@ import { ReposModule } from "@src/repos/repos.module";
 import { AuthModule } from "@src/presentation/auth/auth.module";
 import { EmailModule } from "@src/presentation/email/email.module";
 import { FileModule } from "@src/presentation/file/file.module";
+import { RepoModule } from "@src/presentation/repo/repo.module";
 
 import { Repo } from "@src/infrastructure/database/entities/repo.entity";
 import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
@@ -49,6 +50,7 @@ import { EmailVerification } from "@src/infrastructure/database/entities/email-v
     ReposModule,
     EmailModule,
     FileModule,
+    RepoModule,
   ],
 })
 export class AppModule {}

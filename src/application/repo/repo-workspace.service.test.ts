@@ -8,6 +8,7 @@ import type { CollaboratorRole } from "@src/domain/repo/collaborator-role";
 import type { Repo } from "@src/domain/repo/repo";
 import type { CollaboratorRepository } from "@src/infrastructure/repositories/collaborator.repository";
 import type { RepoRepository } from "@src/infrastructure/repositories/repo.repository";
+import { RepoStorageService } from "@src/infrastructure/git/repo-storage.service";
 import { RepoWorkspaceService } from "./repo-workspace.service";
 
 const REPO_ID = "11111111-1111-4111-8111-111111111111";
@@ -55,7 +56,7 @@ describe("RepoWorkspaceService.open", () => {
     const service = new RepoWorkspaceService(
       { findById: () => Effect.succeed(repo) } as unknown as RepoRepository,
       { findRole } as unknown as CollaboratorRepository,
-      config,
+      new RepoStorageService(config),
     );
     return { service, findRole };
   };

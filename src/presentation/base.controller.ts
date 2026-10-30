@@ -28,6 +28,8 @@ const STATUS_BY_TAG: Record<Exclude<AppError["_tag"], "ApiError">, number> = {
   EmailAlreadyInUseError: HttpStatus.CONFLICT,
   EmailNotVerifiedError: HttpStatus.BAD_REQUEST,
   UserNotFoundError: HttpStatus.NOT_FOUND,
+  CollaboratorConflictError: HttpStatus.CONFLICT,
+  CollaboratorNotFoundError: HttpStatus.NOT_FOUND,
   VerificationCodeError: HttpStatus.BAD_REQUEST,
   // 기존 API와 동일하게 400 유지 (프론트 호환)
   EmailDeliveryError: HttpStatus.BAD_REQUEST,
@@ -72,9 +74,12 @@ const toHttpException = (error: AppError, logger: Logger): HttpException => {
 
 type Issue = ParseResult.ArrayFormatterIssue;
 
+const EXPECTED = /^Expected (.+), actual (.+)$/;
+
 /**
  * optional/union은 분기마다 "Expected ..." 이슈를 만들어 메시지가 장황해진다.
- * 같은 필드에 스키마가 정의한 메시지(filter 등)가 있으면 그것만 남긴다.
+ * - 같은 필드에 스키마가 정의한 메시지(filter 등)가 있으면 그것만 남긴다
+ * - 리터럴 union처럼 후보가 여러 개면 "Expected A | B, actual X" 하나로 합친다
  */
 const readableIssues = (issues: readonly Issue[]): string[] => {
   const keyOf = (issue: Issue) => issue.path.join(".");
@@ -82,13 +87,39 @@ const readableIssues = (issues: readonly Issue[]): string[] => {
   const customKeys = new Set(
     issues.filter((issue) => !isGeneric(issue)).map(keyOf),
   );
-  const messages = issues
-    .filter((issue) => !(isGeneric(issue) && customKeys.has(keyOf(issue))))
-    .map((issue) =>
-      issue.path.length > 0
-        ? `${keyOf(issue)}: ${issue.message}`
-        : issue.message,
-    );
+
+  // 입력 순서를 유지하면서 같은 필드의 "Expected" 이슈를 한 줄로 모은다
+  const lines: Array<
+    string | { prefix: string; expected: string[]; actual: string }
+  > = [];
+  const expectedByKey = new Map<
+    string,
+    { prefix: string; expected: string[]; actual: string }
+  >();
+  for (const issue of issues) {
+    const key = keyOf(issue);
+    if (isGeneric(issue) && customKeys.has(key)) continue;
+    const prefix = issue.path.length > 0 ? `${key}: ` : "";
+    const parsed = EXPECTED.exec(issue.message);
+    if (parsed === null) {
+      lines.push(prefix + issue.message);
+      continue;
+    }
+    const entry = expectedByKey.get(key);
+    if (entry === undefined) {
+      const created = { prefix, expected: [parsed[1]], actual: parsed[2] };
+      expectedByKey.set(key, created);
+      lines.push(created);
+    } else {
+      entry.expected.push(parsed[1]);
+    }
+  }
+
+  const messages = lines.map((line) =>
+    typeof line === "string"
+      ? line
+      : `${line.prefix}Expected ${[...new Set(line.expected)].join(" | ")}, actual ${line.actual}`,
+  );
   return [...new Set(messages)];
 };
 
