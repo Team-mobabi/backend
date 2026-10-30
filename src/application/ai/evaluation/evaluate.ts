@@ -8,19 +8,19 @@
  * 4. 의미 보존율 (Semantic Preservation) - 핵심 키워드 보존 비율
  */
 
-import {
-  AIConflictResolverService,
-  AIResolutionResult,
-  ConfidenceLevel,
-} from "../ai-conflict-resolver.service";
+import type { ConfigService } from "@nestjs/config";
+import { Effect } from "effect";
+import type { ConfidenceLevel } from "@src/domain/ai/ai";
+import { ClaudeClient } from "@src/infrastructure/ai/claude.client";
+import { ConflictResolverService } from "../conflict-resolver.service";
 import {
   testCases,
-  ConflictTestCase,
+  type ConflictTestCase,
   testCaseStats,
 } from "./conflict-test-cases";
 import * as ts from "typescript";
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 // ============================================
 // 타입 정의
@@ -91,10 +91,10 @@ interface CalibrationBin {
 // ============================================
 
 export class ConflictResolverEvaluator {
-  private resolver: AIConflictResolverService;
+  private resolver: ConflictResolverService;
   private results: EvaluationResult[] = [];
 
-  constructor(resolver: AIConflictResolverService) {
+  constructor(resolver: ConflictResolverService) {
     this.resolver = resolver;
   }
 
@@ -145,10 +145,12 @@ export class ConflictResolverEvaluator {
     const startTime = Date.now();
 
     try {
-      const aiResult = await this.resolver.suggestResolution(
-        testCase.conflict,
-        testCase.filePath,
-        testCase.context,
+      const aiResult = await Effect.runPromise(
+        this.resolver.suggest(
+          testCase.conflict,
+          testCase.filePath,
+          testCase.context,
+        ),
       );
 
       const executionTime = Date.now() - startTime;
@@ -195,7 +197,7 @@ export class ConflictResolverEvaluator {
         language: testCase.language,
         aiResolution: "",
         aiConfidence: 0,
-        aiConfidenceLevel: ConfidenceLevel.VERY_LOW,
+        aiConfidenceLevel: "VERY_LOW",
         aiExplanation: "",
         isCorrect: false,
         isAlternativeAccepted: false,
@@ -297,7 +299,11 @@ export class ConflictResolverEvaluator {
     );
 
     // 파싱 에러 확인
-    const diagnostics = (sourceFile as any).parseDiagnostics || [];
+    // parseDiagnostics는 공개 타입에 없는 내부 필드
+    const { parseDiagnostics } = sourceFile as unknown as {
+      parseDiagnostics?: readonly unknown[];
+    };
+    const diagnostics = parseDiagnostics ?? [];
     return diagnostics.length === 0;
   }
 
@@ -420,11 +426,11 @@ export class ConflictResolverEvaluator {
 
     // 신뢰도 분포
     const confidenceDistribution: Record<ConfidenceLevel, number> = {
-      [ConfidenceLevel.VERY_HIGH]: 0,
-      [ConfidenceLevel.HIGH]: 0,
-      [ConfidenceLevel.MEDIUM]: 0,
-      [ConfidenceLevel.LOW]: 0,
-      [ConfidenceLevel.VERY_LOW]: 0,
+      VERY_HIGH: 0,
+      HIGH: 0,
+      MEDIUM: 0,
+      LOW: 0,
+      VERY_LOW: 0,
     };
     for (const r of successful) {
       confidenceDistribution[r.aiConfidenceLevel]++;
@@ -662,18 +668,13 @@ export class ConflictResolverEvaluator {
 // ============================================
 
 export async function runEvaluation(): Promise<void> {
-  // ConfigService 모킹 (테스트용)
-  const mockConfigService = {
-    get: (key: string) => {
-      if (key === "CLAUDE_API_KEY") {
-        return process.env.CLAUDE_API_KEY;
-      }
-      return undefined;
-    },
+  // CLAUDE_MODEL로 평가 대상 모델을 고정할 수 있다 (논문 수치 재현 시)
+  const env: Record<string, string | undefined> = {
+    CLAUDE_API_KEY: process.env.CLAUDE_API_KEY,
+    CLAUDE_MODEL: process.env.CLAUDE_MODEL,
   };
-
-  // 실제 환경에서는 NestJS DI를 통해 주입
-  const resolver = new AIConflictResolverService(mockConfigService as any);
+  const config = { get: (key: string) => env[key] } as unknown as ConfigService;
+  const resolver = new ConflictResolverService(new ClaudeClient(config));
   const evaluator = new ConflictResolverEvaluator(resolver);
 
   try {

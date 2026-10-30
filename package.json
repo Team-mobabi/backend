@@ -15,10 +15,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:fix": "biome check --write src",
-    "tsc": "tsc --noEmit -p tsconfig.json --incremental false"
+    "tsc": "tsc --noEmit -p tsconfig.json --incremental false",
+    "eval:ai": "bun src/application/ai/evaluation/evaluate.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.67.0",
+    "@anthropic-ai/sdk": "^0.137.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.1",
     "@nestjs/core": "^11.0.1",

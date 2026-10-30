@@ -5,13 +5,13 @@ import { Module } from "@nestjs/common";
 import { appConfigValidate } from "@src/app.config";
 
 import { UserModule } from "@src/presentation/user/user.module";
-import { ReposModule } from "@src/repos/repos.module";
 import { AuthModule } from "@src/presentation/auth/auth.module";
 import { EmailModule } from "@src/presentation/email/email.module";
 import { FileModule } from "@src/presentation/file/file.module";
 import { RepoModule } from "@src/presentation/repo/repo.module";
 import { GitModule } from "@src/presentation/git/git.module";
 import { PullRequestModule } from "@src/presentation/pull-request/pull-request.module";
+import { ConflictModule } from "@src/presentation/conflict/conflict.module";
 
 import { Repo } from "@src/infrastructure/database/entities/repo.entity";
 import { PullRequest } from "@src/infrastructure/database/entities/pull-request.entity";
@@ -49,12 +49,12 @@ import { EmailVerification } from "@src/infrastructure/database/entities/email-v
     }),
     AuthModule,
     UserModule,
-    ReposModule,
     EmailModule,
     FileModule,
     RepoModule,
     GitModule,
     PullRequestModule,
+    ConflictModule,
   ],
 })
 export class AppModule {}

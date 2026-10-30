@@ -28,6 +28,8 @@ const AppConfigSchema = Schema.Struct({
 
   // 없으면 AI 기능만 비활성화
   CLAUDE_API_KEY: Schema.optional(Schema.NonEmptyString),
+  // 기본값은 ClaudeClient에 정의. 평가 재현 등으로 모델을 고정할 때 사용
+  CLAUDE_MODEL: Schema.optional(Schema.NonEmptyString),
 });
 
 export type AppConfig = Schema.Schema.Type<typeof AppConfigSchema>;
